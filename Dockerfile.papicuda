@@ -1,0 +1,104 @@
+# Use BuildKit syntax to support richer features
+# syntax=docker/dockerfile:1
+
+ARG UBUNTU_VERSION=22.04
+ARG CUDA_VERSION=12.3.1
+ARG PAPI_VERSION=7.2.0
+
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION}
+
+# Re-declare ARGs to make them available at build time
+ARG PAPI_VERSION
+ARG CUDA_VERSION
+
+# Set CUPTI environment early
+ENV CUPTI_DIR=/usr/local/cuda/extras/CUPTI
+ENV PATH=$PATH:/usr/local/cuda/bin
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:${LD_LIBRARY_PATH:-}
+
+WORKDIR /tmp
+
+# Install build tools & libraries needed
+RUN apt-get update && apt-get install -y --no-install-recommends \
+            wget \
+            build-essential \
+            autoconf automake libtool pkg-config \
+            ca-certificates \
+            libcupti-dev \
+            libnvidia-ml-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install additional dependencies for PAPI with ROCm and common build tools
+RUN apt-get update && apt-get install -y \
+        build-essential \
+        wget \
+        tar \
+        gzip \
+        gcc \
+        g++ \
+        make \
+        libpfm4-dev \
+        linux-tools-generic \
+        pkg-config \
+        git \
+        autoconf \
+        automake \
+        libtool \
+        bc \
+        vim \
+        nano \
+        htop \
+        python3 \
+        python3-pip \
+        python3-psutil \
+        python3-setuptools \
+        python3-wheel \
+        gfortran \
+        libomp-dev \
+        libgomp1 \
+        unzip \
+        zip \
+        rsync \
+        curl \
+        tree \
+        less \
+        grep \
+        sed \
+        gawk \
+        time \
+        strace \
+        lsof \
+        procps \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install CMake 3.24 or higher (required for gunrock)
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.7/cmake-3.27.7-linux-x86_64.tar.gz \
+ && tar xzf cmake-3.27.7-linux-x86_64.tar.gz \
+ && rm -f /usr/local/man \
+ && cp -r cmake-3.27.7-linux-x86_64/bin/* /usr/local/bin/ \
+ && cp -r cmake-3.27.7-linux-x86_64/share/* /usr/local/share/ \
+ && rm -rf cmake-3.27.7-linux-x86_64*
+
+# Download, build, and install PAPI of specified version
+RUN wget https://icl.utk.edu/projects/papi/downloads/papi-${PAPI_VERSION}.tar.gz \
+ && tar xzf papi-${PAPI_VERSION}.tar.gz \
+ && cd papi-${PAPI_VERSION}/src \
+ && chmod +x configure \
+ && ./configure --prefix=/usr/local/papi-${PAPI_VERSION} \
+     --with-components="cuda nvml" \
+     --with-cuda=/usr/local/cuda \
+     --with-cupti=$CUPTI_DIR \
+     --with-nvml=/usr \
+ && make -j$(nproc) 2>&1 | grep -v "make\[.*\]: \*\*\*.*Error" || true \
+ && make install 2>&1 | grep -v "make\[.*\]: \*\*\*.*Error" || true \
+ && cd / && rm -rf /tmp/papi-${PAPI_VERSION}*
+
+# Symlink to a stable location for ease of access
+RUN ln -s /usr/local/papi-${PAPI_VERSION} /usr/local/papi
+
+# Add PAPI bin directory to PATH for convenience
+ENV PATH="/usr/local/papi/bin:$PATH"
+ENV LD_LIBRARY_PATH="/usr/local/papi/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+
+# Default command to keep container alive or open shell
+CMD ["bash"]

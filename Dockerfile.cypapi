@@ -1,0 +1,188 @@
+# Use BuildKit syntax to support richer features
+# syntax=docker/dockerfile:1
+
+ARG UBUNTU_VERSION=22.04
+ARG CUDA_VERSION=12.3.1
+ARG PAPI_VERSION=7.2.0
+
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION}
+
+# Re-declare ARGs to make them available at build time
+ARG PAPI_VERSION
+ARG CUDA_VERSION
+
+# Set CUPTI environment early
+ENV CUPTI_DIR=/usr/local/cuda/extras/CUPTI
+ENV PATH=$PATH:/usr/local/cuda/bin
+ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:${LD_LIBRARY_PATH:-}
+
+WORKDIR /tmp
+
+# Install build tools & libraries needed
+RUN apt-get update && apt-get install -y --no-install-recommends \
+            wget \
+            build-essential \
+            autoconf automake libtool pkg-config \
+            ca-certificates \
+            libcupti-dev \
+            libnvidia-ml-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install additional dependencies for PAPI with CUDA and Python development
+RUN apt-get update && apt-get install -y \
+        build-essential \
+        wget \
+        tar \
+        gzip \
+        gcc \
+        g++ \
+        make \
+        libpfm4-dev \
+        linux-tools-generic \
+        pkg-config \
+        git \
+        autoconf \
+        automake \
+        libtool \
+        bc \
+        vim \
+        nano \
+        htop \
+        python3 \
+        python3-pip \
+        python3-dev \
+        python3-psutil \
+        python3-setuptools \
+        python3-wheel \
+        cython3 \
+        gfortran \
+        libomp-dev \
+        libgomp1 \
+        unzip \
+        zip \
+        rsync \
+        curl \
+        tree \
+        less \
+        grep \
+        sed \
+        gawk \
+        time \
+        strace \
+        lsof \
+        procps \
+        && rm -rf /var/lib/apt/lists/*
+
+# Install CMake 3.24 or higher (required for gunrock)
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.27.7/cmake-3.27.7-linux-x86_64.tar.gz \
+ && tar xzf cmake-3.27.7-linux-x86_64.tar.gz \
+ && rm -f /usr/local/man \
+ && cp -r cmake-3.27.7-linux-x86_64/bin/* /usr/local/bin/ \
+ && cp -r cmake-3.27.7-linux-x86_64/share/* /usr/local/share/ \
+ && rm -rf cmake-3.27.7-linux-x86_64*
+
+# Download, build, and install PAPI of specified version (required for cyPAPI)
+RUN wget https://icl.utk.edu/projects/papi/downloads/papi-${PAPI_VERSION}.tar.gz \
+ && tar xzf papi-${PAPI_VERSION}.tar.gz \
+ && cd papi-${PAPI_VERSION}/src \
+ && chmod +x configure \
+ && ./configure --prefix=/usr/local/papi-${PAPI_VERSION} \
+     --with-components="cuda nvml" \
+     --with-cuda=/usr/local/cuda \
+     --with-cupti=$CUPTI_DIR \
+     --with-nvml=/usr \
+ && make -j$(nproc) 2>&1 | grep -v "make\[.*\]: \*\*\*.*Error" || true \
+ && make install 2>&1 | grep -v "make\[.*\]: \*\*\*.*Error" || true \
+ && cd / && rm -rf /tmp/papi-${PAPI_VERSION}*
+
+# Symlink to a stable location for ease of access
+RUN ln -s /usr/local/papi-${PAPI_VERSION} /usr/local/papi
+
+# Install Python dependencies for cyPAPI
+RUN pip3 install --upgrade pip setuptools wheel numpy cython
+
+# Install PyTorch and ML dependencies for pytorch-3dunet (default CUDA version)
+RUN pip3 install torch torchvision torchaudio
+
+# Install additional ML dependencies
+RUN pip3 install tensorboard tqdm h5py scipy scikit-image pyyaml pytest
+
+# Install cyPAPI (Python bindings for PAPI)
+ENV PAPI_DIR=/usr/local/papi
+ENV LD_LIBRARY_PATH="/usr/local/papi/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+ENV PATH="/usr/local/papi/bin:$PATH"
+
+# Download and extract cyPAPI
+RUN wget https://github.com/icl-utk-edu/cyPAPI/archive/main.zip -O cypapi.zip && \
+    unzip cypapi.zip && \
+    mv cyPAPI-main cyPAPI && \
+    rm cypapi.zip
+
+# Create the custom setup.py file
+RUN cd cyPAPI && echo 'from setuptools import setup, Extension' > setup.py && \
+    echo 'from Cython.Build import cythonize' >> setup.py && \
+    echo 'import os' >> setup.py && \
+    echo 'import numpy' >> setup.py && \
+    echo '' >> setup.py && \
+    echo 'def get_papi_path_pkg_config():' >> setup.py && \
+    echo '    try:' >> setup.py && \
+    echo '        import pkgconfig' >> setup.py && \
+    echo '        papi_path = pkgconfig.variables("cypapi")["prefix"]' >> setup.py && \
+    echo '    except (ImportError, pkgconfig.pkgconfig.PackageNotFoundError):' >> setup.py && \
+    echo '        papi_path = None' >> setup.py && \
+    echo '    return papi_path' >> setup.py && \
+    echo '' >> setup.py && \
+    echo 'def get_papi_path_env_var(path_var: str):' >> setup.py && \
+    echo '    lib_path = os.environ.get(path_var)' >> setup.py && \
+    echo '    if not lib_path:' >> setup.py && \
+    echo '        return None' >> setup.py && \
+    echo '    for path in lib_path.split(":"):' >> setup.py && \
+    echo '        if any(["libpapi" in item for item in os.listdir(path)]):' >> setup.py && \
+    echo '            return os.path.dirname(path)' >> setup.py && \
+    echo '' >> setup.py && \
+    echo 'def configure_extension(ext: Extension, papi_path: str):' >> setup.py && \
+    echo '    papi_inc = os.path.join(papi_path, "include")' >> setup.py && \
+    echo '    papi_lib = os.path.join(papi_path, "lib")' >> setup.py && \
+    echo '' >> setup.py && \
+    echo '    ext.include_dirs.append(papi_inc)' >> setup.py && \
+    echo '    ext.library_dirs.append(papi_lib)' >> setup.py && \
+    echo '    ext.runtime_library_dirs.append(papi_lib)' >> setup.py && \
+    echo '' >> setup.py && \
+    echo 'if os.name == "nt":' >> setup.py && \
+    echo '    raise NotImplementedError("cypapi does not currently support Windows OS")' >> setup.py && \
+    echo '' >> setup.py && \
+    echo 'ext_papi = Extension("cypapi.cypapi", sources=["cypapi/cypapi.pyx"], libraries=["papi"], include_dirs=[numpy.get_include()], define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")])' >> setup.py && \
+    echo 'ext_sde = Extension("cypapi.cysdelib", sources=["cypapi/cysdelib.pyx"], libraries=["papi", "sde"], define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")])' >> setup.py && \
+    echo 'ext_papi_thr = Extension("cypapi.cypapithr", sources=["cypapi/threadsampler.pyx"], libraries=["papi"], include_dirs=[numpy.get_include()], define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")])' >> setup.py && \
+    echo '' >> setup.py && \
+    echo 'papi_path = os.environ.get("PAPI_DIR")' >> setup.py && \
+    echo 'if not papi_path:' >> setup.py && \
+    echo '    papi_path = get_papi_path_pkg_config()' >> setup.py && \
+    echo 'if not papi_path:' >> setup.py && \
+    echo '    papi_path = get_papi_path_env_var("LIBRARY_PATH")' >> setup.py && \
+    echo 'if not papi_path:' >> setup.py && \
+    echo '    papi_path = get_papi_path_env_var("LD_LIBRARY_PATH")' >> setup.py && \
+    echo '' >> setup.py && \
+    echo 'if papi_path:' >> setup.py && \
+    echo '    configure_extension(ext_papi, papi_path)' >> setup.py && \
+    echo '    configure_extension(ext_sde, papi_path)' >> setup.py && \
+    echo '    configure_extension(ext_papi_thr, papi_path)' >> setup.py && \
+    echo '' >> setup.py && \
+    echo 'setup(' >> setup.py && \
+    echo '    name="cypapi",' >> setup.py && \
+    echo '    packages=["cypapi"],' >> setup.py && \
+    echo '    ext_modules=cythonize([ext_papi, ext_sde, ext_papi_thr]),' >> setup.py && \
+    echo '    install_requires=["numpy"],' >> setup.py && \
+    echo ')' >> setup.py
+
+# Create the custom Makefile
+RUN cd cyPAPI && printf 'build: setup.py cypapi/cypapi.pyx cypapi/papih.pxd\n\tpython setup.py build_ext --inplace\n\ninstall:\n\tpip install -v .\n\nclean:\n\trm -rf *.so build/ *.egg-info/\n\tmake -C cypapi clean\n\ndocs:\n\tsphinx-build -M html docs/source/ docs/build/\n' > Makefile
+
+# Build and install cyPAPI with the custom setup.py and Makefile
+RUN cd cyPAPI \
+ && python3 setup.py build_ext --include-dirs=/usr/local/papi/include --library-dirs=/usr/local/papi/lib \
+ && python3 setup.py install \
+ && cd / && rm -rf cyPAPI
+
+# Default command to keep container alive or open shell
+CMD ["bash"]

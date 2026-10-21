@@ -1,0 +1,33 @@
+# Keep locally downloaded proxy applications and nested upstream repositories out of this repository.
+/mincer-package/examples/
+
+# Keep private notes and the excluded AMD ROCm/MLPerf UNet3D runner out of GitHub.
+/build-and-run-unet3d.sh
+/Dockerfile.3dunetrocm.unet3d-papi
+/*_post_text.txt
+
+# Local data, model outputs, and generated experiment/build artifacts.
+**/kits19_data/
+**/kits19/
+**/data/
+**/datasets/
+**/checkpoints*/
+**/experiment_logs/
+**/log_execution_*/
+**/self_test_log_*/
+**/performance_logs/
+**/build/
+**/*.h5
+**/*.hdf5
+**/*.nii
+**/*.nii.gz
+**/*.npy
+**/*.pt
+**/*.pth
+**/*.pytorch
+**/*.log
+**/__pycache__/
+**/*.py[cod]
+
+# Local developer shell configuration.
+/.bashrc

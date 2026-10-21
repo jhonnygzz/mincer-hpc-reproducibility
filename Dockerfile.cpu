@@ -1,0 +1,73 @@
+# syntax=docker/dockerfile:1
+
+# Build arguments for Ubuntu and PAPI versions (defaults provided)
+ARG UBUNTU_VERSION=22.04
+ARG PAPI_VERSION=7.2.0
+
+# Base image with configurable Ubuntu version
+FROM ubuntu:${UBUNTU_VERSION}
+
+# Forward PAPI version into this stage
+ARG PAPI_VERSION
+
+# Install additional dependencies for PAPI with ROCm and common build tools
+RUN apt-get update && apt-get install -y \
+        build-essential \
+        wget \
+        tar \
+        gzip \
+        gcc \
+        g++ \
+        make \
+        libpfm4-dev \
+        linux-tools-generic \
+        pkg-config \
+        cmake \
+        git \
+        autoconf \
+        automake \
+        libtool \
+        bc \
+        vim \
+        nano \
+        htop \
+        python3 \
+        python3-pip \
+        python3-psutil \
+        python3-setuptools \
+        python3-wheel \
+        gfortran \
+        libomp-dev \
+        libgomp1 \
+        unzip \
+        zip \
+        rsync \
+        curl \
+        tree \
+        less \
+        grep \
+        sed \
+        gawk \
+        time \
+        strace \
+        lsof \
+        procps \
+        && rm -rf /var/lib/apt/lists/*
+
+# Download, build, and install PAPI with powercap support
+WORKDIR /opt
+RUN wget https://icl.utk.edu/projects/papi/downloads/papi-${PAPI_VERSION}.tar.gz && \
+    tar -xvzf papi-${PAPI_VERSION}.tar.gz && \
+    cd papi-${PAPI_VERSION}/src && \
+    ./configure --with-components="powercap" && \
+    
+    make && \
+    make install && \
+    cd ../.. && rm -rf papi-${PAPI_VERSION} papi-${PAPI_VERSION}.tar.gz
+
+# Ensure PAPI libraries are found at runtime
+ENV LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
+ENV PATH=/usr/local/bin:${PATH}
+
+# Default to bash shell
+CMD ["/bin/bash"]

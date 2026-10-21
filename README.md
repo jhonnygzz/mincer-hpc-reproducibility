@@ -2,8 +2,6 @@
 
 MINCER is a research toolkit for documenting computing environments and capturing experiment output alongside performance measurements from PAPI and GPU monitoring components.
 
-**Suggested GitHub repository name:** `mincer-hpc-reproducibility`
-
 ## What this repository contains
 
 - MINCER's environment-manifest and experiment-log utilities in `mincer-package/`.

@@ -2,6 +2,8 @@
 
 These guides describe the intended MINCER workloads, the upstream locations for separately acquiring their source/data, and how to invoke MINCER's experiment runner once a compatible workload directory and `run.sh` are available.
 
+For first-time setup on the three Chameleon machines, follow the [node quick start](../nodes/quickstart.md).
+
 **Status:** These draft instructions are based on available project notes and local files. They have not been executed on a fresh Chameleon allocation. Do not treat previously recorded PAPI counters or historical output as expected values for a different node.
 
 | Workload | CPU | NVIDIA | AMD | External data |

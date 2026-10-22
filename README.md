@@ -7,6 +7,7 @@ MINCER is a research toolkit for documenting computing environments and capturin
 - MINCER's environment-manifest and experiment-log utilities in `mincer-package/`.
 - Dockerfiles for CPU, NVIDIA CUDA, and AMD ROCm/PAPI environments.
 - Human-readable guides for acquiring and running the benchmark workloads.
+- First-run checklists for the [Cascade Lake CPU, MI100, and RTX 6000 nodes](docs/nodes/quickstart.md).
 
 Benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are not part of the intended GitHub upload. Download workloads and data separately by following [the benchmark guides](docs/benchmarks/README.md). The root `.gitignore` excludes the current local benchmark tree and common generated data/artifacts.
 
@@ -67,6 +68,8 @@ python3 mincer-package/run_experiment.py --path /path/to/workload
 The runner records system information and captured script output in a timestamped `experiment_logs/` directory beneath the workload. By default it looks for `run.sh`; a different script can be selected with `--script`. The runner does not build the required image, fetch the workload, or download/convert datasets.
 
 See [MINCER package usage](mincer-package/README.md) and [benchmark run guides](docs/benchmarks/README.md) for the limits and per-workload instructions.
+
+For fresh Chameleon allocations, start with the [node-specific quick start](docs/nodes/quickstart.md).
 
 ## Testing and provenance
 

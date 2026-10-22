@@ -32,6 +32,55 @@ and the PDF's six cycle/instruction/L1 counters. CPU setup prepares its pinned
 sources. See the [CPU quick start](docs/nodes/quickstart.md#cpu-profile-cascade-lake-r)
 for the shared setup/run procedure and counter-access prerequisite.
 
+## Start on CPU
+
+The repository is private, so your GitHub account needs access and an approved
+authentication method before cloning. Never put tokens in clone URLs or logs.
+
+```bash
+git clone https://github.com/jhonnygzz/mincer-hpc-reproducibility.git
+cd mincer-hpc-reproducibility
+```
+
+With Git, `patch`, Python 3 with venv support, and administrator-configured
+Docker access, set up once:
+
+```bash
+MINCER_USE_SUDO_DOCKER=1 bash setup_cpu.sh
+```
+
+This node uses approved non-interactive `sudo -n docker`; omit
+`MINCER_USE_SUDO_DOCKER=1` from setup and run commands when Docker is directly
+accessible. Setup creates the shared Python environment, builds the CPU PAPI
+image, and fetches pinned LULESH/Kokkos sources. No GPU setup is needed.
+
+**Before running:** this node's default `perf_event_paranoid=4` blocks the
+required instruction/cycle measurements. Arrange administrator-approved
+[counter access](docs/nodes/cpu-validation.md#counter-access-prerequisite)
+first. Neither setup nor the profiling opt-in changes host policy.
+
+After access is arranged, run a selected example through MINCER:
+
+```bash
+MINCER_ALLOW_CPU_PROFILING=1 MINCER_USE_SUDO_DOCKER=1 \
+  "$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/MatrixMultiplication/cpu"
+```
+
+Change only `--path` to select another CPU example; no repeat setup is needed:
+
+| Example | Path relative to the repository | Required checks |
+| --- | --- | --- |
+| Matrix multiplication | `mincer-package/examples/MatrixMultiplication/cpu` | Both layouts correct, outputs match, instructions/cycles and IPC for each |
+| XSBench | `mincer-package/examples/XSBench/openmp-threading` | `954318 (Valid)`, package/DRAM energy PASS, main-thread performance PASS |
+| LULESH | `mincer-package/examples/LULESH/cpu` | Numerical correctness PASS, all six main-thread PAPI counters and IPC |
+
+Open the printed output/log location. Builds and runs are captured rather than
+streamed, so the terminal may be quiet while MINCER works. A numerical PASS or
+`SKIP: No reference file provided` alone does not establish measurement success.
+See the [CPU validation record](docs/nodes/cpu-validation.md) for observed
+results, failure diagnostics, measurement scope, and fresh-source test limits.
+
 ## Start with XSBench on NVIDIA
 
 First clone the repository and enter it:
@@ -90,8 +139,9 @@ normal, but does not establish correctness. See the
 ## Current status
 
 The XSBench, LULESH, and Gunrock CUDA workflows have been tested on a Quadro
-RTX 6000; see the validation record above. CPU matrix multiplication and CPU
-XSBench OpenMP, and CPU LULESH/Kokkos are validated on the same CPU node.
+RTX 6000; see the validation record above. CPU matrix multiplication,
+XSBench OpenMP, and LULESH/Kokkos are validated on the same CPU node; see the
+[CPU validation record](docs/nodes/cpu-validation.md).
 AMD workflows remain drafts. AMD setup is not provided.
 
 Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.

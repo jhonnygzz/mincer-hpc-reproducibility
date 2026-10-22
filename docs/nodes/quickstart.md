@@ -6,13 +6,16 @@ Adapt image versions, GPU architecture/compiler options, device access, thread c
 
 The matrix-multiplication, XSBench, and LULESH CPU workflows have been validated
 on one Xeon Gold 6240R node; the AMD commands below remain test plans.
+See the [CPU validation record](cpu-validation.md) and
+[README's CPU walkthrough](../../README.md#start-on-cpu) for the measured
+results and shortest setup/run procedure.
 The XSBench, LULESH, and Gunrock CUDA setup/run workflows have an
 [NVIDIA validation record](nvidia-validation.md). Start with the
 [README's NVIDIA walkthrough](../../README.md#start-with-xsbench-on-nvidia);
 the external upstream smoke tests below are optional, not additional required
 steps for those three instrumented examples.
 
-## 1. Get the repository and prepare Python
+## 1. Get the repository
 
 The GitHub repository is private. The repository owner must add each tester's GitHub account as a collaborator before they clone it. On the node, authenticate with GitHub CLI (`gh auth login --web`) or the site's approved Git credential method, then clone over HTTPS. GitHub account passwords are not accepted for Git operations; never put an access token in a command, URL, or shared log.
 
@@ -22,13 +25,18 @@ git clone https://github.com/jhonnygzz/mincer-hpc-reproducibility.git \
 cd "$HOME/mincer-hpc-reproducibility"
 ```
 
-Create a user-local Python environment for MINCER:
+For the included CPU and NVIDIA workflows, continue to the applicable platform
+setup below. Those setup scripts create the shared `$HOME/.venvs/mincer`
+environment and install `psutil`; no separate activation, pip upgrade, or manual
+Python setup is needed.
+
+For standalone MINCER utilities or draft backends without platform setup,
+create a user-local Python environment manually:
 
 ```bash
 python3 --version
 python3 -m venv "$HOME/.venvs/mincer"
 source "$HOME/.venvs/mincer/bin/activate"
-python -m pip install --upgrade pip
 python -m pip install psutil
 ```
 
@@ -48,6 +56,11 @@ lscpu
 free -h
 docker version
 ```
+
+If this node's direct Docker check is denied but the administrator has approved
+non-interactive sudo Docker access, check with `sudo -n docker version` instead.
+The CPU commands below select that path explicitly with
+`MINCER_USE_SUDO_DOCKER=1`; omit the variable when direct access works.
 
 Record the output in your test notes, but remove usernames, access tokens, and other private values before sharing logs.
 
@@ -82,7 +95,7 @@ measurements. Setup can complete while the example still fails. Ask the
 administrator to arrange approved counter access before running; the profiling
 opt-in does not bypass host policy. See the
 [CPU counter permissions](../benchmarks/matrix-multiplication.md#cpu-counter-permissions)
-details.
+details and the [shared CPU validation record](cpu-validation.md#counter-access-prerequisite).
 
 After counter access is arranged, run the selected example through MINCER:
 

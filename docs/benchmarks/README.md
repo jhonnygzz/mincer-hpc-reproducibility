@@ -7,7 +7,8 @@ For first-time setup on the three Chameleon machines, follow the [node quick sta
 **Status:** [CPU matrix multiplication](matrix-multiplication.md),
 [XSBench OpenMP](xsbench.md#included-cpu-openmp-example), and
 [LULESH OpenMP](lulesh.md#cpu-prepare-and-run) have been validated on
-one Xeon Gold 6240R node. [XSBench CUDA](xsbench.md), [LULESH CUDA](lulesh.md),
+one Xeon Gold 6240R node; see the [CPU validation record](../nodes/cpu-validation.md).
+[XSBench CUDA](xsbench.md), [LULESH CUDA](lulesh.md),
 and [Gunrock CUDA](gunrock.md) have been tested on an RTX 6000; see the
 [validation record](../nodes/nvidia-validation.md). AMD workflows remain
 drafts. Do not treat recorded performance counters as expected
@@ -38,7 +39,12 @@ The AMD ROCm/MLPerf UNet3D example is intentionally not documented here.
    python3 mincer-package/run_experiment.py --path /absolute/path/to/workload
    ```
 
-The runner expects `run.sh` inside the workload directory. It invokes that script with Bash and saves its captured standard output and system information under `experiment_logs/`. It does not install dependencies, build Docker images, retrieve datasets, or validate numerical results unless an appropriate reference output is supplied.
+The runner expects `run.sh` inside the workload directory. It invokes that
+script with Bash and saves captured output and system information under
+`experiment_logs/`. Platform setup prepares images/dependencies; example
+launchers build and run the workload. The runner's optional reference comparison
+is textual, not a numerical-tolerance check. The included CPU examples perform
+their own numerical checks even without a reference file.
 
 ## Known portability blockers in the local historical scripts
 

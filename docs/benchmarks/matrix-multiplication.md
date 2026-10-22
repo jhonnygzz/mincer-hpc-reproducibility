@@ -25,6 +25,9 @@ directly accessible, omit `MINCER_USE_SUDO_DOCKER=1`. Setup prepares the shared
 and lists its components. Component availability does not prove that hardware
 counters can be read.
 
+Shared CPU setup also prepares pinned LULESH/Kokkos sources, requiring Git and
+`patch`; see the [CPU quick start](../nodes/quickstart.md#platform-setup).
+
 ## Run through MINCER
 
 **Prerequisite on this CPU node:** the default `perf_event_paranoid=4` policy
@@ -74,9 +77,9 @@ access requires an administrator-configured non-interactive sudo rule, set
 `MINCER_USE_SUDO_DOCKER=1`; this uses `sudo -n docker` and does not prompt for a
 password. Neither opt-in changes the host setting.
 
-Future CPU XSBench and LULESH launchers must use these same two CPU opt-in
+The validated [CPU XSBench](xsbench.md#included-cpu-openmp-example) and
+[LULESH](lulesh.md#cpu-prepare-and-run) launchers use these same two CPU opt-in
 variables and fail explicitly when required counters cannot be collected.
-Those CPU workflows are not implemented or validated yet.
 
 ## Validation on the CPU node
 

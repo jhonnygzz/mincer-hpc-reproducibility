@@ -11,7 +11,8 @@ MINCER is a research toolkit for documenting HPC computing environments and capt
 
 The PAPI-instrumented XSBench CPU/OpenMP and CUDA examples are included with
 their upstream license, as is the CPU matrix multiplication source. LULESH and
-Gunrock CUDA use pinned upstream downloads plus small instrumentation patches.
+Gunrock CUDA use pinned upstream downloads plus small instrumentation patches;
+LULESH CPU/OpenMP uses the same pinned dependencies with CPU instrumentation.
 Other benchmark source trees, datasets, model weights, generated binaries,
 container images, and experiment logs are excluded. Follow [the benchmark
 guides](docs/benchmarks/README.md) for those workloads.
@@ -25,6 +26,11 @@ results and the administrator-approved counter-access requirements.
 The CPU XSBench OpenMP example is also validated through MINCER on that node.
 Its guide records the checksum, package/DRAM RAPL energy, main-thread PAPI
 counters, and the node's administrator-managed counter-access prerequisite.
+
+CPU LULESH/Kokkos is also validated on that node, including numerical checks
+and the PDF's six cycle/instruction/L1 counters. CPU setup prepares its pinned
+sources. See the [CPU quick start](docs/nodes/quickstart.md#cpu-profile-cascade-lake-r)
+for the shared setup/run procedure and counter-access prerequisite.
 
 ## Start with XSBench on NVIDIA
 
@@ -85,8 +91,8 @@ normal, but does not establish correctness. See the
 
 The XSBench, LULESH, and Gunrock CUDA workflows have been tested on a Quadro
 RTX 6000; see the validation record above. CPU matrix multiplication and CPU
-XSBench OpenMP are validated on one node each. CPU LULESH and AMD workflows
-remain drafts. AMD setup is not provided.
+XSBench OpenMP, and CPU LULESH/Kokkos are validated on the same CPU node.
+AMD workflows remain drafts. AMD setup is not provided.
 
 Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
 
@@ -101,7 +107,7 @@ The measurement workloads target Linux. GPU examples additionally require a comp
 
 - NVIDIA: CUDA-capable GPU, NVIDIA driver, Docker, and NVIDIA Container Toolkit.
 - AMD: ROCm-compatible GPU and ROCm drivers on the host, Docker, and access to `/dev/kfd` and `/dev/dri`.
-- CPU: Docker and permission to access host performance counters. PAPI
+- CPU: Git, `patch`, Python venv support, Docker, and permission to access host performance counters. PAPI
   `perf_event` access is controlled by host kernel/security settings; see the
   [CPU matrix guide](docs/benchmarks/matrix-multiplication.md) and
   [XSBench guide](docs/benchmarks/xsbench.md).

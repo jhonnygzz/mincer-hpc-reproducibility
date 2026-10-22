@@ -1,0 +1,70 @@
+--- a/lulesh.cc
++++ b/lulesh.cc
+@@ -12,6 +12,8 @@
+ #include <unistd.h>
+ 
+ #include "lulesh.h"
++#include "papi_metrics.h"
++#include "validate_result.h"
+ 
+ static Kokkos::View<Real_t*> buffer;
+ static size_t buffer_size;
+@@ -2066,6 +2068,7 @@
+ int main(int argc, char *argv[]) {
+   Int_t numRanks;
+   Int_t myRank;
++  bool runOK = true;
+   struct cmdLineOpts opts;
+ 
+ #if USE_MPI
+@@ -2118,6 +2121,10 @@
+   Domain locDom(numRanks, col, row, plane, opts.nx, side, opts.numReg,
+                 opts.balance, opts.cost);
+ 
++  PAPIMetrics papiMetrics;
++  bool papiReady = papiMetrics.initialize();
++  if (!papiReady) runOK = false;
++
+ #if USE_MPI
+   fieldData = &Domain::nodalMass;
+ 
+@@ -2138,6 +2145,9 @@
+   timeval start;
+   gettimeofday(&start, NULL);
+ #endif
++  Kokkos::fence();
++  bool papiStarted = papiReady && papiMetrics.start();
++  if (!papiStarted) runOK = false;
+   while ((locDom.time() < locDom.stoptime()) && (locDom.cycle() < opts.its)) {
+ 
+     TimeIncrement(locDom);
+@@ -2148,6 +2158,8 @@
+              double(locDom.time()), double(locDom.deltatime()));
+     }
+   }
++  Kokkos::fence();
++  if (papiStarted && !papiMetrics.stop()) runOK = false;
+ 
+   double elapsed_time;
+ #if USE_MPI
+@@ -2174,6 +2186,13 @@
+     VerifyAndWriteFinalOutput(elapsed_timeG, locDom, opts.nx, numRanks);
+   }
+ 
++  auto energy = Kokkos::create_mirror_view_and_copy(
++      Kokkos::HostSpace(), locDom.e_view());
++  if (!validateResult(energy.data(), opts.nx, locDom.cycle())) runOK = false;
++  if (!papiMetrics.printResults()) runOK = false;
++  if (!papiMetrics.cleanup()) runOK = false;
++  if (!runOK) fprintf(stderr, "ERROR: LULESH failed numerical correctness or required PAPI measurement checks.\n");
++
+   buffer = Kokkos::View<Real_t*>();
+   }
+   Kokkos::finalize();
+@@ -2181,5 +2200,5 @@
+   MPI_Finalize();
+ #endif
+ 
+-  return 0;
++  return runOK ? 0 : 1;
+ }

@@ -4,8 +4,8 @@ The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware p
 
 Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Begin with a small smoke test; do not start with the large medical-imaging workload.
 
-The matrix-multiplication and XSBench CPU workflows have been validated on one
-Xeon Gold 6240R node; CPU LULESH and the AMD commands below remain test plans.
+The matrix-multiplication, XSBench, and LULESH CPU workflows have been validated
+on one Xeon Gold 6240R node; the AMD commands below remain test plans.
 The XSBench, LULESH, and Gunrock CUDA setup/run workflows have an
 [NVIDIA validation record](nvidia-validation.md). Start with the
 [README's NVIDIA walkthrough](../../README.md#start-with-xsbench-on-nvidia);
@@ -66,6 +66,9 @@ PAPI image once:
 MINCER_USE_SUDO_DOCKER=1 bash setup_cpu.sh
 ```
 
+Setup also fetches pinned LULESH/Kokkos sources into an ignored build directory;
+it requires Git and `patch` in addition to Python venv support and Docker.
+
 This node's approved Docker path works without an interactive `sudo -v`
 authentication step. The opt-in uses non-interactive `sudo -n docker`; if it
 does not work on another node, ask its administrator to configure Docker access
@@ -124,6 +127,25 @@ validated run used 96 threads and about 5.6 GiB of host memory. See the
 [XSBench guide](../benchmarks/xsbench.md) for the recorded results and the
 scope of the per-socket and main-thread counters. The CPU opt-ins and setup do
 not change host counter policy.
+
+### LULESH Kokkos/OpenMP
+
+The same administrator-managed counter-access prerequisite applies; policy
+`4` blocks the six required cycle/instruction/L1 events. After access is
+arranged, run without repeating platform setup:
+
+```bash
+MINCER_ALLOW_CPU_PROFILING=1 MINCER_USE_SUDO_DOCKER=1 \
+  "$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/LULESH/cpu"
+```
+
+Inspect the printed `output.txt` path. Require numerical correctness PASS for
+the 96-cubed/10-iteration case, origin energy near `3.833852e+08`, symmetry
+checks, and PAPI measurement PASS with all six events and IPC.
+See the [LULESH CPU guide](../benchmarks/lulesh.md#cpu-prepare-and-run) for exact
+tolerances, measured results, and main-thread counter scope. This example does
+not claim energy measurement.
 
 ## AMD GPU profile: MI100
 

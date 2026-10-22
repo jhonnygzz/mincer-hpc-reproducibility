@@ -27,6 +27,7 @@ esac
     fail "Docker is not accessible through the selected path. Ask the administrator to configure direct access or approved non-interactive sudo Docker access."
 command -v python3 >/dev/null ||
     fail "Python 3 is missing. Ask the node administrator to provide Python 3 and venv support."
+bash "$ROOT/prepare_lulesh_cpu.sh"
 
 python3 -m venv "$VENV"
 "$VENV/bin/python" -m pip install psutil

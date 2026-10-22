@@ -13,6 +13,14 @@
 !/mincer-package/examples/LULESH/cuda/Makefile
 !/mincer-package/examples/LULESH/cuda/run.sh
 !/mincer-package/examples/LULESH/cuda/monitoring.patch
+!/mincer-package/examples/LULESH/cpu/
+/mincer-package/examples/LULESH/cpu/*
+!/mincer-package/examples/LULESH/cpu/Makefile
+!/mincer-package/examples/LULESH/cpu/run.sh
+!/mincer-package/examples/LULESH/cpu/monitoring.patch
+!/mincer-package/examples/LULESH/cpu/papi_metrics.cpp
+!/mincer-package/examples/LULESH/cpu/papi_metrics.h
+!/mincer-package/examples/LULESH/cpu/validate_result.h
 !/mincer-package/examples/XSBench/
 /mincer-package/examples/XSBench/*
 !/mincer-package/examples/XSBench/LICENSE

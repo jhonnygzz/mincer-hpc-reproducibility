@@ -102,6 +102,9 @@ On the validation node, this uses the administrator-approved non-interactive
 `MINCER_USE_SUDO_DOCKER=1` when Docker is directly available to your account.
 Setup does not change host counter policy.
 
+Shared CPU setup also fetches pinned LULESH/Kokkos sources and requires Git and
+`patch`; see the [CPU quick start](../nodes/quickstart.md#platform-setup).
+
 **Counter-access prerequisite:** at this node's default
 `perf_event_paranoid=4`, PAPI's required `PAPI_TOT_CYC` and `PAPI_TOT_INS`
 events are unavailable. Package/DRAM energy can be read, but the full

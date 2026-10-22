@@ -7,7 +7,7 @@ MINCER is a research toolkit for documenting computing environments and capturin
 - MINCER's environment-manifest and experiment-log utilities in `mincer-package/`.
 - Dockerfiles for CPU, NVIDIA CUDA, and AMD ROCm/PAPI environments.
 - Human-readable guides for acquiring and running the benchmark workloads.
-- First-run checklists for the [Cascade Lake CPU, MI100, and RTX 6000 nodes](docs/nodes/quickstart.md).
+- A [node quick start](docs/nodes/quickstart.md) with Cascade Lake CPU, MI100, and RTX 6000 hardware profiles. These are validation targets; MINCER users should adapt the steps to their own nodes.
 
 Benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are not part of the intended GitHub upload. Download workloads and data separately by following [the benchmark guides](docs/benchmarks/README.md). The root `.gitignore` excludes the current local benchmark tree and common generated data/artifacts.
 

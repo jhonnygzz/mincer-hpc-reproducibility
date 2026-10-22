@@ -1,8 +1,10 @@
-# Chameleon node quick start
+# Node quick start and hardware profiles
 
-This guide is for first-time testers on the three MINCER node types: Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000. Begin with a small smoke test; do not start with the large medical-imaging workload.
+The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware profiles used for the project owner's planned validation on Chameleon. They are examples, not requirements for MINCER users: users should run the relevant CPU, AMD, or NVIDIA workflow on their **own** Linux nodes with compatible processors/GPUs, drivers, and container support.
 
-The commands below are a test plan, not verified results. Run them on the matching Linux node and save the output. The benchmark folders and PAPI-specific source modifications are downloaded separately and are not in this repository.
+Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Begin with a small smoke test; do not start with the large medical-imaging workload.
+
+The commands below are a test plan, not verified results. Run them on the target Linux node and save the output. The benchmark folders and PAPI-specific source modifications are downloaded separately and are not in this repository.
 
 ## 1. Get the repository and prepare Python
 
@@ -43,7 +45,9 @@ docker version
 
 Record the output in your test notes, but remove usernames, access tokens, and other private values before sharing logs.
 
-## Cascade Lake R: CPU tests
+## CPU profile: Cascade Lake R
+
+Use this section as the project's CPU validation profile. On another CPU node, check the host's compiler, available memory, operating system, and PAPI/perf permissions. Adjust the `-t 4` example thread count to suit the node.
 
 ### Check the CPU PAPI image
 
@@ -108,7 +112,9 @@ python mincer-package/run_experiment.py \
 
 The MINCER output is written under the external workload's `experiment_logs/` directory. For another CPU workload, see [LULESH](../benchmarks/lulesh.md) and [matrix multiplication](../benchmarks/matrix-multiplication.md); the matrix source/launcher must be supplied separately.
 
-## MI100: AMD ROCm tests
+## AMD GPU profile: MI100
+
+Use this section as the project's AMD validation profile. For another AMD accelerator, verify that its GPU architecture is supported by the host driver, ROCm container, and benchmark toolchain. Update architecture-specific compiler options when needed.
 
 ### Check host GPU and container access
 
@@ -190,7 +196,9 @@ python mincer-package/run_experiment.py \
 
 Then continue with the AMD variants in [LULESH](../benchmarks/lulesh.md) and [Gunrock](../benchmarks/gunrock.md). The AMD ROCm/MLPerf 3D U-Net example is excluded from this repository's test instructions.
 
-## RTX 6000: NVIDIA CUDA tests
+## NVIDIA GPU profile: RTX 6000
+
+Use this section as the project's NVIDIA validation profile. For another NVIDIA GPU, verify that its compute capability is supported by the selected CUDA toolkit and benchmark build flags. Select a compatible CUDA image/runtime rather than assuming CUDA 12.3.1 works on every host.
 
 ### Check host GPU and NVIDIA Container Toolkit
 

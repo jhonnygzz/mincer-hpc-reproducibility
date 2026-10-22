@@ -134,4 +134,4 @@ Use the `cuda` or `hip` directory for the corresponding accelerator. The experim
 
 No external dataset is required. Record the verification checksum and whether XSBench reports it as valid. Previously recorded CPU and accelerator output values are hardware-specific examples, not thresholds for a new node.
 
-These external CPU/HIP procedures remain unvalidated; the included CUDA example's results are recorded above. Check available memory, PAPI component/event availability, and node permissions. The larger CPU problem size may require several gigabytes of memory; select a smaller size if node resources require it.
+These external CPU/HIP procedures remain unvalidated; the included CUDA example's results are recorded above. When a MINCER CPU XSBench launcher is implemented, it must use the shared CPU opt-ins `MINCER_ALLOW_CPU_PROFILING=1` (counter capability) and `MINCER_USE_SUDO_DOCKER=1` (only if sudo Docker is required), matching the matrix example. Check available memory, PAPI component/event availability, and node permissions. The larger CPU problem size may require several gigabytes of memory; select a smaller size if node resources require it.

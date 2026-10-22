@@ -4,8 +4,9 @@ The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware p
 
 Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Begin with a small smoke test; do not start with the large medical-imaging workload.
 
-The CPU and AMD commands below are a test plan, not verified results. The XSBench,
-LULESH, and Gunrock CUDA setup/run workflows have an
+The matrix-multiplication CPU workflow has been validated on one Xeon Gold
+6240R node; CPU XSBench/LULESH and the AMD commands below remain test plans.
+The XSBench, LULESH, and Gunrock CUDA setup/run workflows have an
 [NVIDIA validation record](nvidia-validation.md). Start with the
 [README's NVIDIA walkthrough](../../README.md#start-with-xsbench-on-nvidia);
 the external upstream smoke tests below are optional, not additional required
@@ -52,19 +53,53 @@ Record the output in your test notes, but remove usernames, access tokens, and o
 
 ## CPU profile: Cascade Lake R
 
-Use this section as the project's CPU validation profile. On another CPU node, check the host's compiler, available memory, operating system, and PAPI/perf permissions. Adjust the `-t 4` example thread count to suit the node.
+Use this section as the project's CPU validation profile. On another CPU node,
+check the host's compiler, available memory, operating system, and PAPI/perf
+permissions.
 
-### Check the CPU PAPI image
+### Platform setup
 
-From the repository root:
+From the repository root, prepare the shared MINCER Python environment and CPU
+PAPI image once:
 
 ```bash
-docker build -f Dockerfile.cpu -t mincer-papi-cpu:latest .
-docker run --rm mincer-papi-cpu:latest papi_avail
-docker run --rm mincer-papi-cpu:latest papi_component_avail
+MINCER_USE_SUDO_DOCKER=1 bash setup_cpu.sh
 ```
 
-The CPU image installs PAPI with the `powercap` component. These commands check what the image exposes; they do not prove that CPU hardware counters are available to a container. Check the node's PAPI/perf permissions with its administrator if counter access fails. Do not change `perf_event_paranoid` or grant privileged container access without approval.
+This node's approved Docker path works without an interactive `sudo -v`
+authentication step. The opt-in uses non-interactive `sudo -n docker`; if it
+does not work on another node, ask its administrator to configure Docker access
+rather than entering a password into the benchmark command.
+
+### Run a selected example
+
+**Counter-access prerequisite:** on this node, the default
+`perf_event_paranoid=4` policy prevents the required PAPI instruction and cycle
+measurements. Setup can complete while the example still fails. Ask the
+administrator to arrange approved counter access before running; the profiling
+opt-in does not bypass host policy. See the
+[CPU counter permissions](../benchmarks/matrix-multiplication.md#cpu-counter-permissions)
+details.
+
+After counter access is arranged, run the selected example through MINCER:
+
+```bash
+MINCER_ALLOW_CPU_PROFILING=1 MINCER_USE_SUDO_DOCKER=1 \
+  "$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/MatrixMultiplication/cpu"
+```
+
+Inspect the printed `output.txt` path under the workload's timestamped
+`experiment_logs/` directory. Matrix multiplication must report PASS for both
+numerical checks and matching outputs, and successful `PAPI_TOT_INS`,
+`PAPI_TOT_CYC`, and IPC values for each layout. Counter failures produce a
+nonzero result rather than fabricated measurements.
+
+On this node,
+`MINCER_ALLOW_CPU_PROFILING=1` and `MINCER_USE_SUDO_DOCKER=1` are explicit
+opt-ins, and the default policy `perf_event_paranoid=4` prevents validated
+PAPI collection. The successful run required administrator-managed temporary
+policy access. Neither setup nor benchmark launchers change host policy.
 
 ### XSBench CPU smoke test
 
@@ -115,7 +150,7 @@ python mincer-package/run_experiment.py \
   --path "$HOME/mincer-workloads/XSBench/openmp-threading"
 ```
 
-The MINCER output is written under the external workload's `experiment_logs/` directory. For another CPU workload, see [LULESH](../benchmarks/lulesh.md) and [matrix multiplication](../benchmarks/matrix-multiplication.md); the matrix source/launcher must be supplied separately.
+The MINCER output is written under the external workload's `experiment_logs/` directory. For another CPU workload, see [LULESH](../benchmarks/lulesh.md) and the [matrix multiplication guide](../benchmarks/matrix-multiplication.md), which includes its source and launcher.
 
 ## AMD GPU profile: MI100
 

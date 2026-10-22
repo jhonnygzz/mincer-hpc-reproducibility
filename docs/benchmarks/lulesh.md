@@ -4,6 +4,11 @@ LULESH is a hydrodynamics proxy application. This repository prepares an
 instrumented NVIDIA CUDA example from pinned upstream sources. CPU and AMD
 variants remain planned and are not validated here.
 
+When a MINCER CPU LULESH launcher is implemented, it must use the shared CPU
+opt-ins `MINCER_ALLOW_CPU_PROFILING=1` (counter capability) and
+`MINCER_USE_SUDO_DOCKER=1` (only if sudo Docker is required), matching the
+matrix example. Host counter policy remains administrator-managed.
+
 ## NVIDIA: prepare and run
 
 From the repository root on a compatible NVIDIA node:

@@ -9,7 +9,13 @@ MINCER is a research toolkit for documenting HPC computing environments and capt
 - Human-readable guides for acquiring and running the benchmark workloads.
 - A [node quick start](docs/nodes/quickstart.md) with Cascade Lake CPU, MI100, and RTX 6000 hardware profiles. These are validation targets; MINCER users should adapt the steps to their own nodes.
 
-The small PAPI-instrumented XSBench CUDA example is included with its upstream license. LULESH and Gunrock CUDA use pinned upstream downloads plus small instrumentation patches. Other benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are excluded. Follow [the benchmark guides](docs/benchmarks/README.md) for those workloads.
+The small PAPI-instrumented XSBench CUDA example is included with its upstream license, as is the CPU matrix multiplication source. LULESH and Gunrock CUDA use pinned upstream downloads plus small instrumentation patches. Other benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are excluded. Follow [the benchmark guides](docs/benchmarks/README.md) for those workloads.
+
+The CPU matrix multiplication example and `setup_cpu.sh` provide a separate
+CPU-only starting point. It has been validated through MINCER on one Xeon Gold
+6240R node, with analytical numerical checks and actual PAPI measurements; see
+the [matrix guide](docs/benchmarks/matrix-multiplication.md) for the observed
+results and the administrator-approved counter-access requirements.
 
 ## Start with XSBench on NVIDIA
 
@@ -68,7 +74,7 @@ normal, but does not establish correctness. See the
 
 ## Current status
 
-The XSBench, LULESH, and Gunrock CUDA workflows have been tested on a Quadro RTX 6000; see the validation record above. Other workload guides remain preparation drafts. CPU and AMD setup scripts are not yet provided.
+The XSBench, LULESH, and Gunrock CUDA workflows have been tested on a Quadro RTX 6000; see the validation record above. CPU matrix multiplication is validated on one node; CPU XSBench/LULESH and AMD workflows remain drafts. AMD setup is not provided.
 
 Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
 
@@ -83,7 +89,7 @@ The measurement workloads target Linux. GPU examples additionally require a comp
 
 - NVIDIA: CUDA-capable GPU, NVIDIA driver, Docker, and NVIDIA Container Toolkit.
 - AMD: ROCm-compatible GPU and ROCm drivers on the host, Docker, and access to `/dev/kfd` and `/dev/dri`.
-- CPU: Docker and permission to access the host performance counters. PAPI `perf_event` access is controlled by host kernel/security settings.
+- CPU: Docker and permission to access the host performance counters. PAPI `perf_event` access is controlled by host kernel/security settings; see the [CPU matrix guide](docs/benchmarks/matrix-multiplication.md).
 
 The Dockerfiles provide tool environments; they do not provision Chameleon resources or download benchmark datasets.
 

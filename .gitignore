@@ -27,6 +27,15 @@
 !/mincer-package/examples/XSBench/cuda/XSbench_header.cuh
 !/mincer-package/examples/XSBench/cuda/Makefile
 !/mincer-package/examples/XSBench/cuda/run.sh
+!/mincer-package/examples/MatrixMultiplication/
+/mincer-package/examples/MatrixMultiplication/*
+!/mincer-package/examples/MatrixMultiplication/cpu/
+/mincer-package/examples/MatrixMultiplication/cpu/*
+!/mincer-package/examples/MatrixMultiplication/cpu/matrix_kernels.c
+!/mincer-package/examples/MatrixMultiplication/cpu/matrix_kernels.h
+!/mincer-package/examples/MatrixMultiplication/cpu/matrix_multiplication.c
+!/mincer-package/examples/MatrixMultiplication/cpu/run.sh
+!/mincer-package/examples/MatrixMultiplication/cpu/test_matrix_kernels.c
 
 # Keep private notes and the excluded AMD ROCm/MLPerf UNet3D runner out of GitHub.
 /build-and-run-unet3d.sh

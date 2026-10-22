@@ -4,8 +4,8 @@ The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware p
 
 Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Begin with a small smoke test; do not start with the large medical-imaging workload.
 
-The matrix-multiplication CPU workflow has been validated on one Xeon Gold
-6240R node; CPU XSBench/LULESH and the AMD commands below remain test plans.
+The matrix-multiplication and XSBench CPU workflows have been validated on one
+Xeon Gold 6240R node; CPU LULESH and the AMD commands below remain test plans.
 The XSBench, LULESH, and Gunrock CUDA setup/run workflows have an
 [NVIDIA validation record](nvidia-validation.md). Start with the
 [README's NVIDIA walkthrough](../../README.md#start-with-xsbench-on-nvidia);
@@ -101,56 +101,29 @@ opt-ins, and the default policy `perf_event_paranoid=4` prevents validated
 PAPI collection. The successful run required administrator-managed temporary
 policy access. Neither setup nor benchmark launchers change host policy.
 
-### XSBench CPU smoke test
+### XSBench OpenMP
 
-Download XSBench outside the MINCER checkout:
+**Counter-access prerequisite:** the node's default `perf_event_paranoid=4`
+blocks the PAPI instruction and cycle events required for a complete XSBench
+run. Package/DRAM energy may still be collected, but missing performance
+counters make the run fail. Ask the administrator to arrange approved counter
+access before running; the profiling opt-in cannot override host policy. See
+the [XSBench CPU permissions](../benchmarks/xsbench.md#cpu-permissions-and-measurement-scope).
 
-```bash
-mkdir -p "$HOME/mincer-workloads"
-git clone https://github.com/ANL-CESAR/XSBench.git \
-  "$HOME/mincer-workloads/XSBench"
-```
-
-Build and run a small OpenMP problem in the CPU container:
-
-```bash
-docker run --rm \
-  -v "$HOME/mincer-workloads/XSBench:/work/XSBench" \
-  -w /work/XSBench/openmp-threading \
-  mincer-papi-cpu:latest \
-  bash -lc 'make clean && make && ./XSBench -s small -t 4'
-```
-
-Look for a successful run and a valid verification checksum. The upstream source is not the MINCER PAPI-instrumented variant, so this smoke test validates compilation/execution, not the historical PAPI measurements.
-
-### Capture a run with MINCER
-
-Add a small launcher to the downloaded workload directory (not to this repository):
+Run the included XSBench source through MINCER:
 
 ```bash
-cat > "$HOME/mincer-workloads/XSBench/openmp-threading/run.sh" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-docker run --rm \
-  -v "$SCRIPT_DIR:/work" \
-  -w /work \
-  mincer-papi-cpu:latest \
-  bash -lc 'make clean && make && ./XSBench -s small -t 4'
-EOF
+MINCER_ALLOW_CPU_PROFILING=1 MINCER_USE_SUDO_DOCKER=1 \
+  "$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/XSBench/openmp-threading"
 ```
 
-From the MINCER repository root, with the Python environment activated:
-
-```bash
-python mincer-package/mincer_package.py \
-  --path "$HOME/mincer-workloads/XSBench/openmp-threading" \
-  --output "$HOME/mincer-workloads/XSBench/mincer-manifest.json"
-python mincer-package/run_experiment.py \
-  --path "$HOME/mincer-workloads/XSBench/openmp-threading"
-```
-
-The MINCER output is written under the external workload's `experiment_logs/` directory. For another CPU workload, see [LULESH](../benchmarks/lulesh.md) and the [matrix multiplication guide](../benchmarks/matrix-multiplication.md), which includes its source and launcher.
+Inspect the printed `output.txt` path. Require `954318 (Valid)` and successful
+package/DRAM energy, total cycles, total instructions, and IPC results. The
+validated run used 96 threads and about 5.6 GiB of host memory. See the
+[XSBench guide](../benchmarks/xsbench.md) for the recorded results and the
+scope of the per-socket and main-thread counters. The CPU opt-ins and setup do
+not change host counter policy.
 
 ## AMD GPU profile: MI100
 

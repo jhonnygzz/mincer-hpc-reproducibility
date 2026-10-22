@@ -1,13 +1,16 @@
 # XSBench
 
-XSBench is a proxy application for the continuous-energy neutron cross-section lookup kernel. This guide covers CPU/OpenMP, NVIDIA CUDA, and AMD HIP runs with performance counters.
+XSBench is a proxy application for the continuous-energy neutron cross-section
+lookup kernel. This guide covers the validated CPU/OpenMP and NVIDIA CUDA
+examples, plus unvalidated AMD HIP guidance.
 
 ## Included NVIDIA CUDA example
 
 The repository includes a small source-only XSBench v20 CUDA example with MINCER's
 PAPI instrumentation. Upstream copyright and the MIT license are preserved in
 [`LICENSE`](../../mincer-package/examples/XSBench/LICENSE). Builds, binaries, and
-logs stay ignored. CPU and HIP examples are not yet included or tested here.
+logs stay ignored. The CPU/OpenMP implementation from the verified handoff
+bundle is included as source with PAPI instrumentation.
 
 From the repository root:
 
@@ -77,7 +80,129 @@ See the [validation record](../nodes/nvidia-validation.md) for tested results an
 known limitations. `MINCER_CUDA_IMAGE` overrides the image for setup and launcher;
 `MINCER_VENV` overrides the Python environment location for setup.
 
+## Included CPU OpenMP example
+
+The source-only CPU implementation is under
+[`openmp-threading`](../../mincer-package/examples/XSBench/openmp-threading/).
+It keeps the handoff's XSBench v20 source and MIT license, adds checked PAPI
+measurement of the PDF's package/DRAM energy and total cycles/instructions, and
+runs through MINCER. No separate dataset download is needed.
+
+### Platform setup and run
+
+From the repository root, prepare the shared CPU PAPI image and MINCER Python
+environment once:
+
+```bash
+MINCER_USE_SUDO_DOCKER=1 bash setup_cpu.sh
+```
+
+On the validation node, this uses the administrator-approved non-interactive
+`sudo -n docker` path; it does not prompt for a Linux password. Omit
+`MINCER_USE_SUDO_DOCKER=1` when Docker is directly available to your account.
+Setup does not change host counter policy.
+
+**Counter-access prerequisite:** at this node's default
+`perf_event_paranoid=4`, PAPI's required `PAPI_TOT_CYC` and `PAPI_TOT_INS`
+events are unavailable. Package/DRAM energy can be read, but the full
+measurement run correctly fails when CPU performance counters cannot be
+collected. Arrange administrator-approved counter access before the measured
+run; the profiling opt-in does not change host policy.
+
+After approved counter access is arranged, invoke the included example through
+MINCER:
+
+```bash
+MINCER_ALLOW_CPU_PROFILING=1 MINCER_USE_SUDO_DOCKER=1 \
+  "$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/XSBench/openmp-threading"
+```
+
+The launcher builds from source on each run and uses the PDF's large,
+history-based, unionized-grid case: 500,000 particle histories, 34 lookups per
+history (17,000,000 total), and the node's available thread count (96 on the
+validated node). Set `MINCER_XSBENCH_THREADS` to override the thread count.
+The problem uses about 5.6 GiB of host memory. Compiler diagnostics go to the
+ignored `build/` directory; MINCER prints the timestamped `output.txt` location
+under `experiment_logs/`.
+
+Require `Verification checksum: 954318 (Valid)`, `PAPI RAPL energy
+measurement: PASS`, and `PAPI performance measurement (main thread): PASS`,
+including positive package/DRAM energy, `PAPI_TOT_CYC`, `PAPI_TOT_INS`, and IPC.
+A valid checksum does not imply measurement success; required measurement
+failures produce a nonzero run result.
+
+### CPU permissions and measurement scope
+
+The launcher drops all container capabilities by default. The explicit
+`MINCER_ALLOW_CPU_PROFILING=1` opt-in adds only `CAP_PERFMON` and runs the
+measurement container as container root; the root filesystem and workload
+mount are read-only. Host `/sys` is mounted read-only so PAPI can discover the
+RAPL uncore events. This is not `--privileged`, and neither setup nor launcher
+changes host policy.
+
+On the validation node, the successful full run required an
+administrator-approved temporary change of `perf_event_paranoid` from `4` to
+`0`; it was restored to `4` immediately after the run. Do not change this
+setting yourself or assume `CAP_PERFMON` alone overrides the default policy.
+Coordinate a counter-access window with the node administrator before running.
+Do not rely on a shell cleanup trap as a guarantee of restoration after every
+interruption or machine failure.
+
+RAPL energy values are system energy for socket 0, not process-attributed
+energy or whole-node totals. PAPI total cycles/instructions are attached to
+XSBench's main thread while the OpenMP simulation runs; they are not sums over
+all OpenMP workers. The derived cycle rate is not CPU frequency. These readings
+are observations, not thresholds; other node models, policies, PAPI versions,
+and container configurations may differ.
+
+### CPU validation on the supplied node
+
+Validated on October 22, 2026 on Ubuntu 24.04.4 / Linux 6.8.0-124-generic,
+dual-socket Intel Xeon Gold 6240R, with Ubuntu 22.04 / PAPI 7.2.0 container
+image and 96 OpenMP threads. The correctness checksum was valid and all exact
+PDF-required measurements were collected:
+
+| Metric | Observed result |
+| --- | ---: |
+| Verification checksum | 954318 (Valid) |
+| Total lookups | 17,000,000 |
+| Runtime | 1.667 s |
+| Package energy, socket 0 | 933.996003 J |
+| DRAM energy, socket 0 | 53.335491 J |
+| Package + DRAM energy, socket 0 | 987.331494 J |
+| Average package power, socket 0 | 560.140 W |
+| Average DRAM power, socket 0 | 31.987 W |
+| Average package + DRAM power, socket 0 | 592.127 W |
+| PAPI_TOT_CYC, main thread | 5,208,251,732 |
+| PAPI_TOT_INS, main thread | 838,689,162 |
+| Main-thread cycle rate over simulation wall time | 3.124 Gcycles/s |
+| Main-thread instruction rate over simulation wall time | 502.983 MIPS |
+| IPC, main thread | 0.161031 |
+
+The upstream Makefile compiles successfully but GCC warns about unchecked
+`fread` return values in the optional binary-read path in `io.c`; the validated
+default run uses generated data and binary mode is off.
+
+The successful run used the host policy value `0` only for the administrator-
+approved run window; the policy was verified restored to `4` afterward. The
+default-policy test produced checksum `941535 (Valid)` for the upstream small
+case and collected socket-0 RAPL energy, but correctly failed the required CPU
+performance-counter checks. The report above is one measurement, not a
+performance threshold.
+
+Before committing, a source-only export passed all 19 package unit tests and
+built XSBench without existing objects or binaries. Its small history-based run
+again produced `941535 (Valid)` and exited nonzero for inaccessible CPU counters
+under the unchanged policy `4`. This check reused the host Docker installation,
+the existing CPU PAPI image, and the shared Python environment; it was not a
+clean-OS test. The full measured run above was not repeated for this check.
+
 ## Other backends and upstream smoke tests
+
+The external source steps below are optional and are not needed for the
+included CPU/OpenMP or CUDA workflows. Use them only when testing an upstream
+variant outside those validated examples.
 
 ### Acquire the upstream source
 
@@ -134,4 +259,9 @@ Use the `cuda` or `hip` directory for the corresponding accelerator. The experim
 
 No external dataset is required. Record the verification checksum and whether XSBench reports it as valid. Previously recorded CPU and accelerator output values are hardware-specific examples, not thresholds for a new node.
 
-These external CPU/HIP procedures remain unvalidated; the included CUDA example's results are recorded above. When a MINCER CPU XSBench launcher is implemented, it must use the shared CPU opt-ins `MINCER_ALLOW_CPU_PROFILING=1` (counter capability) and `MINCER_USE_SUDO_DOCKER=1` (only if sudo Docker is required), matching the matrix example. Check available memory, PAPI component/event availability, and node permissions. The larger CPU problem size may require several gigabytes of memory; select a smaller size if node resources require it.
+The included CPU/OpenMP and CUDA workflows are validated only on their
+respective recorded nodes; HIP remains unvalidated. The CPU launcher uses the
+shared opt-ins `MINCER_ALLOW_CPU_PROFILING=1` (counter capability) and
+`MINCER_USE_SUDO_DOCKER=1` (only if approved sudo Docker is needed), matching
+the matrix example. Check available memory, PAPI event availability, and node
+permissions before adapting the workflow to another CPU.

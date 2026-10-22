@@ -2,6 +2,20 @@
 
 This guide covers the NVIDIA CUDA PyTorch 3D U-Net workflow. It is separate from the AMD ROCm/MLPerf UNet3D example, which is intentionally excluded.
 
+**Status: deferred, not validated (October 22, 2026).** All three uploaded HDF5
+inputs fail to open because they are truncated. Their actual sizes are roughly
+2–3 MB each, while their headers record approximately 149 MB, 202 MB, and 69 MB.
+Complete original copies are no longer available. No training or monitoring
+validation was performed, and no new U-Net container or full dataset download
+was attempted. The steps below are historical preparation notes, not a working
+fresh-user procedure. Use XSBench, LULESH, or Gunrock for the validated NVIDIA
+walkthrough instead.
+
+Resuming this example requires obtaining suitable KiTS19 cases, documenting and
+testing conversion into HDF5, and validating a portable training/monitoring
+environment. Do not substitute synthetic data and describe it as reproducing
+the PDF's KiTS19 experiment.
+
 ## Acquire the application and data
 
 Clone the PyTorch 3D U-Net project outside the MINCER repository:

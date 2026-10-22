@@ -13,6 +13,17 @@ The small PAPI-instrumented XSBench CUDA example is included with its upstream l
 
 ## Start with XSBench on NVIDIA
 
+First clone the repository and enter it:
+
+```bash
+git clone https://github.com/jhonnygzz/mincer-hpc-reproducibility.git
+cd mincer-hpc-reproducibility
+```
+
+The repository is currently private: the owner must grant your GitHub account
+access, and you must authenticate using GitHub CLI or an approved Git credential
+method before cloning. Never put a token in the clone URL or shared logs.
+
 On a Linux node with a working NVIDIA driver, Docker, NVIDIA Container Toolkit, and Python venv support:
 
 ```bash
@@ -28,13 +39,32 @@ it refuses that restart when Docker has running containers. It does not install
 GPU drivers, change Docker group membership, or change host profiling policy.
 
 Setup also prepares pinned LULESH/Kokkos and Gunrock sources in ignored build
-directories. See the [LULESH CUDA guide](docs/benchmarks/lulesh.md) and
-[Gunrock CUDA guide](docs/benchmarks/gunrock.md) for their run commands.
+directories. Run them from the same repository root without repeating setup:
+
+```bash
+"$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/LULESH/cuda"
+"$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/Gunrock/cuda"
+```
 
 If the host restricts GPU profiling, the default experiment fails explicitly.
 Only with administrator approval, use the opt-in capability described in the
 [XSBench guide](docs/benchmarks/xsbench.md). See the
 [NVIDIA validation record](docs/nodes/nvidia-validation.md) for actual results and limitations.
+
+After approval, prefix **each** run command with `MINCER_ALLOW_GPU_PROFILING=1`.
+Setup alone does not authorize counter access. Initial builds/downloads can take
+several minutes, and MINCER captures output rather than displaying live progress.
+
+For each run, open the printed `output.txt` path under the workload's
+`experiment_logs/` directory. Check XSBench's `952131 (Valid)` checksum,
+LULESH's origin energy near `3.833852e+08` and zero symmetry differences, and
+Gunrock's `Number of errors : 0`. Each example must also print four CUDA
+measurements and two NVML measurements. A skipped reference comparison is
+normal, but does not establish correctness. See the
+[LULESH guide](docs/benchmarks/lulesh.md) and
+[Gunrock guide](docs/benchmarks/gunrock.md) for details and build-log locations.
 
 ## Current status
 
@@ -42,7 +72,10 @@ The XSBench, LULESH, and Gunrock CUDA workflows have been tested on a Quadro RTX
 
 Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
 
-The AMD ROCm/MLPerf 3D U-Net example is intentionally omitted from the run guides. The separate PyTorch 3D U-Net/KiTS19 guide covers the NVIDIA workflow.
+The AMD ROCm/MLPerf 3D U-Net example is intentionally omitted from the run guides.
+The separate NVIDIA PyTorch 3D U-Net/KiTS19 workflow is **deferred, not validated**:
+the uploaded HDF5 inputs are truncated, complete originals are unavailable, and
+reproducible data conversion remains missing. It is not part of this quick start.
 
 ## Requirements
 

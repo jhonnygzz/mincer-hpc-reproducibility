@@ -4,7 +4,12 @@ The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware p
 
 Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Begin with a small smoke test; do not start with the large medical-imaging workload.
 
-The CPU and AMD commands below are a test plan, not verified results. The included XSBench CUDA sources and setup workflow have an [NVIDIA validation record](nvidia-validation.md). Other benchmark sources and PAPI modifications must be obtained separately.
+The CPU and AMD commands below are a test plan, not verified results. The XSBench,
+LULESH, and Gunrock CUDA setup/run workflows have an
+[NVIDIA validation record](nvidia-validation.md). Start with the
+[README's NVIDIA walkthrough](../../README.md#start-with-xsbench-on-nvidia);
+the external upstream smoke tests below are optional, not additional required
+steps for those three instrumented examples.
 
 ## 1. Get the repository and prepare Python
 
@@ -287,7 +292,10 @@ python mincer-package/run_experiment.py \
   --path "$HOME/mincer-workloads/XSBench/cuda"
 ```
 
-The [Gunrock guide](../benchmarks/gunrock.md) is another NVIDIA GPU test. The [PyTorch 3D U-Net guide](../benchmarks/pytorch-3dunet.md) requires KiTS19 data converted to three HDF5 files; do not start it until that missing conversion step is documented and verified.
+The [Gunrock guide](../benchmarks/gunrock.md) is another NVIDIA GPU test.
+[PyTorch 3D U-Net](../benchmarks/pytorch-3dunet.md) is deferred and not validated:
+its uploaded HDF5 inputs are truncated, complete originals are unavailable, and
+data conversion remains undocumented. It is excluded from the current walkthrough.
 
 ## What to send back after each node test
 

@@ -1,4 +1,4 @@
-# XSBench CUDA validation
+# NVIDIA CUDA validation
 
 ## Environment and scope
 
@@ -160,3 +160,42 @@ Gunrock/dependency sources, rebuilt BFS, and again reported zero CPU/GPU
 distance mismatches with all six measurements present. Only the existing tested
 Docker image layers and Python environment were reused. This is not a test of
 automatic system installation on a newly reimaged node.
+
+## Fresh-user walkthrough, October 22, 2026
+
+An HTTPS clone from GitHub stopped at an unavailable authentication prompt,
+consistent with the documented private-repository access requirement. A clean
+`git clone --no-local` from the committed local repository was used instead.
+This validates the committed checkout, not GitHub authentication or anonymous
+access. No ignored dependencies, binaries, or logs came from the original
+checkout or uploaded MINCER tree.
+
+From that clone, `bash setup_cuda.sh` completed, fetched fresh pinned sources,
+and printed the three run commands. All three were then run through MINCER
+with the previously approved `MINCER_ALLOW_GPU_PROFILING=1`:
+
+| Workload | Exit status | Inspected correctness result | Measurements |
+| --- | --- | --- | --- |
+| XSBench | 0 | 17 million lookups; checksum `952131 (Valid)` | Four CUDA counters, NVML power and temperature |
+| LULESH | 0 | 96 cubed, 10 iterations; energy `3.833852e+08`; all three symmetry differences zero | Four CUDA counters, NVML utilization and temperature |
+| Gunrock BFS | 0 | Source 17; zero CPU/GPU distance mismatches | Four CUDA counters, NVML utilization and temperature |
+
+The eight existing Python regression tests also passed. Generated payloads
+remained ignored and the test clone's tracked working tree stayed clean.
+No workload/setup implementation changes were needed. The README now includes
+clone/access instructions, all three run commands, profiling guidance, and
+the checks to inspect in the saved output.
+
+This machine already had Docker, NVIDIA Container Toolkit, the tested container
+layers, and the Python environment. Those were reused; this is not a clean-OS
+installation test. Initial benchmark source/dependency downloads and compilation
+were performed again. System installation and changes to host profiling policy
+were not attempted.
+
+## Deferred: PyTorch 3D U-Net
+
+The three uploaded KiTS19 HDF5 inputs are truncated and cannot be opened.
+Complete original copies are unavailable, and a reproducible conversion process
+has not been supplied. The workflow is deferred, not validated, and excluded
+from the fresh-user walkthrough. No new U-Net image build, full dataset download,
+or training run was performed.

@@ -34,8 +34,7 @@ for the shared setup/run procedure and counter-access prerequisite.
 
 ## Start on CPU
 
-The repository is private, so your GitHub account needs access and an approved
-authentication method before cloning. Never put tokens in clone URLs or logs.
+First clone the repository and enter it:
 
 ```bash
 git clone https://github.com/jhonnygzz/mincer-hpc-reproducibility.git
@@ -89,10 +88,6 @@ First clone the repository and enter it:
 git clone https://github.com/jhonnygzz/mincer-hpc-reproducibility.git
 cd mincer-hpc-reproducibility
 ```
-
-The repository is currently private: the owner must grant your GitHub account
-access, and you must authenticate using GitHub CLI or an approved Git credential
-method before cloning. Never put a token in the clone URL or shared logs.
 
 On a Linux node with a working NVIDIA driver, Docker, NVIDIA Container Toolkit, and Python venv support:
 
@@ -203,11 +198,6 @@ measurements.
 
 Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
 
-The AMD ROCm/MLPerf 3D U-Net example is intentionally omitted from the run guides.
-The separate NVIDIA PyTorch 3D U-Net/KiTS19 workflow is **deferred, not validated**:
-the uploaded HDF5 inputs are truncated, complete originals are unavailable, and
-reproducible data conversion remains missing. It is not part of this quick start.
-
 ## Requirements
 
 The measurement workloads target Linux. GPU examples additionally require a compatible GPU, host drivers, and the matching container runtime/device access:
@@ -271,4 +261,4 @@ The current AMD XSBench HIP validation is recorded separately in the
 
 ## Attribution
 
-The benchmark guides link to the original upstream projects and the KiTS19 dataset. Follow each upstream project's license and citation requirements when downloading, running, or redistributing its source or data. Do not commit third-party benchmark sources or datasets to this repository.
+The benchmark guides link to the original upstream projects. Follow each upstream project's license and citation requirements when downloading, running, or redistributing its source or data.

@@ -4,7 +4,7 @@ These guides describe the intended MINCER workloads, the upstream locations for 
 
 For first-time setup on the three Chameleon machines, follow the [node quick start](../nodes/quickstart.md).
 
-**Status:** These draft instructions are based on available project notes and local files. They have not been executed on a fresh Chameleon allocation. Do not treat previously recorded PAPI counters or historical output as expected values for a different node.
+**Status:** The included [XSBench CUDA workflow](xsbench.md) has been tested on an RTX 6000; see the [validation record](../nodes/nvidia-validation.md). Other workflows remain draft instructions. Do not treat recorded performance counters as expected values for a different node.
 
 | Workload | CPU | NVIDIA | AMD | External data |
 | --- | --- | --- | --- | --- |
@@ -21,7 +21,7 @@ The AMD ROCm/MLPerf UNet3D example is intentionally not documented here.
 1. Provision a Linux Chameleon node appropriate for the selected CPU/GPU backend.
 2. Install/configure Docker and the corresponding host GPU runtime/driver.
 3. Build the applicable image from a root Dockerfile, or use an image already configured for the benchmark.
-4. Download benchmark source and data to a separate location; do not put those payloads in a Git commit.
+4. Use the included XSBench CUDA source, or download other benchmark source/data to a separate location; do not commit downloaded payloads.
 5. Confirm the benchmark directory contains a working `run.sh` compatible with that source and node.
 6. From the repository root, run:
 
@@ -33,7 +33,7 @@ The runner expects `run.sh` inside the workload directory. It invokes that scrip
 
 ## Known portability blockers in the local historical scripts
 
-- The project notes reference `setup_cpu.sh`, `setup_cuda.sh`, and `setup_amd.sh`; those setup scripts are absent from this workspace.
+- `setup_cuda.sh` now prepares the included NVIDIA XSBench workflow. The historical CPU and AMD setup scripts remain absent.
 - Several old `run.sh` files mount fixed paths under `/home/cc/` and expect image names that differ between examples. Replace these paths/tags for the actual checkout and node.
 - Some documented runs use PAPI-instrumented variants. Downloading an upstream project alone may not reproduce those modifications or expose the same PAPI events.
 - The historical PyTorch KiTS19 workflow expects preprocessed HDF5 case files. The full dataset download command is given in its guide, but the conversion/subset-preparation procedure for the exact historical files is not included here.

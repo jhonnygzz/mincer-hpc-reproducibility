@@ -9,13 +9,34 @@ MINCER is a research toolkit for documenting HPC computing environments and capt
 - Human-readable guides for acquiring and running the benchmark workloads.
 - A [node quick start](docs/nodes/quickstart.md) with Cascade Lake CPU, MI100, and RTX 6000 hardware profiles. These are validation targets; MINCER users should adapt the steps to their own nodes.
 
-Benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are not part of the intended GitHub upload. Download workloads and data separately by following [the benchmark guides](docs/benchmarks/README.md). The root `.gitignore` excludes the current local benchmark tree and common generated data/artifacts.
+The small PAPI-instrumented XSBench CUDA example is included with its upstream license. Other benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are excluded. Follow [the benchmark guides](docs/benchmarks/README.md) for those workloads.
+
+## Start with XSBench on NVIDIA
+
+On a Linux node with a working NVIDIA driver, Docker, NVIDIA Container Toolkit, and Python venv support:
+
+```bash
+bash setup_cuda.sh
+"$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/XSBench/cuda"
+```
+
+On Ubuntu 22.04/24.04, `bash setup_cuda.sh --install-system` can install Docker,
+NVIDIA Container Toolkit, and Python venv support **with administrator approval**.
+It uses sudo, adds NVIDIA's package repository when needed, and restarts Docker;
+it refuses that restart when Docker has running containers. It does not install
+GPU drivers, change Docker group membership, or change host profiling policy.
+
+If the host restricts GPU profiling, the default experiment fails explicitly.
+Only with administrator approval, use the opt-in capability described in the
+[XSBench guide](docs/benchmarks/xsbench.md). See the
+[NVIDIA validation record](docs/nodes/nvidia-validation.md) for actual results and limitations.
 
 ## Current status
 
-The run instructions are a preparation draft based on available project notes and files. They have **not** been validated on a newly provisioned Chameleon node. The setup scripts (`setup_cpu.sh`, `setup_cuda.sh`, and `setup_amd.sh`) are not present in this workspace.
+The included XSBench CUDA workflow has been tested on a Quadro RTX 6000; see the validation record above. Other workload guides remain preparation drafts. CPU and AMD setup scripts are not yet provided.
 
-The original example launch scripts also contain machine-specific absolute paths and expect PAPI-instrumented benchmark copies and image tags that are not consistently built by the Dockerfiles here. The guides call out these prerequisites rather than claiming that a fresh clone can run every PAPI example unchanged. Confirm paths, image tags, PAPI events, and dataset preparation on the target node before treating measurements as reproducible.
+Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
 
 The AMD ROCm/MLPerf 3D U-Net example is intentionally omitted from the run guides. The separate PyTorch 3D U-Net/KiTS19 guide covers the NVIDIA workflow.
 

@@ -36,7 +36,7 @@ python3 mincer-package/run_experiment.py \
   --script run-benchmark.sh
 ```
 
-The runner stores captured output and a system-information log in a timestamped `experiment_logs/run_<timestamp>/` directory beneath the workload directory. It has a 10-minute script timeout. It does not compare results unless `--reference` is supplied.
+The runner stores captured standard output and standard error and a system-information log in a timestamped `experiment_logs/run_<timestamp>/` directory beneath the workload directory. Output is captured, not streamed live. It has a 10-minute script timeout. Failed runs save diagnostics and return a nonzero exit status, as do reference mismatches. It does not compare results unless `--reference` is supplied.
 
 For end-to-end requirements and external benchmark/data acquisition, see the [benchmark guides](../docs/benchmarks/README.md).
 

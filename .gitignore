@@ -1,5 +1,19 @@
-# Keep locally downloaded proxy applications and nested upstream repositories out of this repository.
-/mincer-package/examples/
+# Keep only the selected XSBench CUDA sources; exclude other local upstream trees.
+/mincer-package/examples/*
+!/mincer-package/examples/XSBench/
+/mincer-package/examples/XSBench/*
+!/mincer-package/examples/XSBench/LICENSE
+!/mincer-package/examples/XSBench/cuda/
+/mincer-package/examples/XSBench/cuda/*
+!/mincer-package/examples/XSBench/cuda/Main.cu
+!/mincer-package/examples/XSBench/cuda/Simulation.cu
+!/mincer-package/examples/XSBench/cuda/GridInit.cu
+!/mincer-package/examples/XSBench/cuda/Materials.cu
+!/mincer-package/examples/XSBench/cuda/XSutils.cu
+!/mincer-package/examples/XSBench/cuda/io.cu
+!/mincer-package/examples/XSBench/cuda/XSbench_header.cuh
+!/mincer-package/examples/XSBench/cuda/Makefile
+!/mincer-package/examples/XSBench/cuda/run.sh
 
 # Keep private notes and the excluded AMD ROCm/MLPerf UNet3D runner out of GitHub.
 /build-and-run-unet3d.sh

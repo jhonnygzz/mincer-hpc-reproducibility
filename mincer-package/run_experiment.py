@@ -3,6 +3,7 @@ import datetime
 import os
 import shutil
 import subprocess
+import sys
 import traceback
 from mincer_package import get_system_info
 
@@ -30,7 +31,7 @@ def run_script(path, script_name):
         raise RuntimeError(f"Script failed with return code {result.returncode}. Error details:\n{output}")
     
     # If successful, return just the stdout
-    return result.stdout
+    return result.stdout + result.stderr
 
 def compare_output(output_file, reference_file):
     """Compare output file with reference file and return differences."""
@@ -77,7 +78,7 @@ def write_log(system_info, run_log, diff, log_path):
         f.write("\n\n")
         
         f.write("Output Comparison:\n")
-        if len(diff) == 0:  # Empty diff list means no comparison was done
+        if diff is None:
             f.write("  SKIP: No reference file provided\n")
         elif not diff:
             f.write("  PASS: Output matches reference\n")
@@ -96,11 +97,11 @@ def main():
 
     system_info = {}
     run_log = ""
-    diff = []
+    diff = None
     error_occurred = False
 
     # Prepare results directory - create main logs folder and timestamped subfolder
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S-%f")
     main_logs_dir = os.path.join(args.path, "experiment_logs")
     results_dir = os.path.join(main_logs_dir, f"run_{timestamp}")
     os.makedirs(results_dir, exist_ok=True)
@@ -140,13 +141,17 @@ def main():
         run_log = f"ERROR running experiment: {e}\n{traceback.format_exc()}"
         print(run_log)
         error_occurred = True
+        with open(output_path, "w") as f:
+            f.write(run_log)
 
     # Compare output
     print("\n=== Comparing Output ===")
     try:
-        if not args.reference:
-            diff = []
-            print("SKIP: No reference file provided - test completed successfully")
+        if error_occurred:
+            diff = ["ERROR: Comparison not performed because experiment or system detection failed."]
+            print(diff[0])
+        elif not args.reference:
+            print("SKIP: No reference file provided")
         elif not os.path.exists(args.reference):
             diff = [f"ERROR: Reference file not found: {args.reference}\n"]
             print(diff[0])
@@ -154,6 +159,7 @@ def main():
         else:
             diff = compare_output(output_path, args.reference)
             if diff and not any(line.startswith("ERROR") for line in diff):
+                error_occurred = True
                 print("FAIL: Output does not match reference.")
                 print("First differences:")
                 for line in diff[:10]:
@@ -162,6 +168,7 @@ def main():
                 print("PASS: Output matches reference.")
             else:
                 print(diff[0])
+                error_occurred = True
     except Exception as e:
         diff = [f"ERROR comparing output: {e}\n{traceback.format_exc()}"]
         print(diff[0])
@@ -173,6 +180,9 @@ def main():
         print(f"Test log written to: {log_path}")
     except Exception as e:
         print(f"ERROR writing log file: {e}")
+        error_occurred = True
+
+    return 1 if error_occurred else 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

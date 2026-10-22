@@ -13,6 +13,7 @@ ARG CUDA_VERSION
 
 # Set CUPTI environment early
 ENV CUPTI_DIR=/usr/local/cuda/extras/CUPTI
+ENV PAPI_CUDA_ROOT=/usr/local/cuda
 ENV PATH=$PATH:/usr/local/cuda/bin
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64:${LD_LIBRARY_PATH:-}
 
@@ -89,8 +90,8 @@ RUN wget https://icl.utk.edu/projects/papi/downloads/papi-${PAPI_VERSION}.tar.gz
      --with-cuda=/usr/local/cuda \
      --with-cupti=$CUPTI_DIR \
      --with-nvml=/usr \
- && make -j$(nproc) 2>&1 | grep -v "make\[.*\]: \*\*\*.*Error" || true \
- && make install 2>&1 | grep -v "make\[.*\]: \*\*\*.*Error" || true \
+ && make -j$(nproc) \
+ && make install \
  && cd / && rm -rf /tmp/papi-${PAPI_VERSION}*
 
 # Symlink to a stable location for ease of access

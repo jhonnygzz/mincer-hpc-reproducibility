@@ -4,7 +4,7 @@ The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware p
 
 Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Begin with a small smoke test; do not start with the large medical-imaging workload.
 
-The commands below are a test plan, not verified results. Run them on the target Linux node and save the output. The benchmark folders and PAPI-specific source modifications are downloaded separately and are not in this repository.
+The CPU and AMD commands below are a test plan, not verified results. The included XSBench CUDA sources and setup workflow have an [NVIDIA validation record](nvidia-validation.md). Other benchmark sources and PAPI modifications must be obtained separately.
 
 ## 1. Get the repository and prepare Python
 
@@ -198,6 +198,18 @@ Then continue with the AMD variants in [LULESH](../benchmarks/lulesh.md) and [Gu
 
 ## NVIDIA GPU profile: RTX 6000
 
+For the included, PAPI-instrumented XSBench example, start with:
+
+```bash
+bash setup_cuda.sh
+"$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/XSBench/cuda"
+```
+
+See the [XSBench guide](../benchmarks/xsbench.md) for administrator-approved
+profiling permissions and optional system installation. The upstream smoke test
+below is separate and does not include MINCER instrumentation.
+
 Use this section as the project's NVIDIA validation profile. For another NVIDIA GPU, verify that its compute capability is supported by the selected CUDA toolkit and benchmark build flags. Select a compatible CUDA image/runtime rather than assuming CUDA 12.3.1 works on every host.
 
 ### Check host GPU and NVIDIA Container Toolkit
@@ -222,7 +234,7 @@ docker run --rm --gpus all mincer-papi-cuda:latest \
   bash -lc 'nvidia-smi && papi_component_avail && papi_avail'
 ```
 
-Review the build output carefully: the current Dockerfile can mask some PAPI build/install failures. A successful Docker build alone is not proof that PAPI's CUDA/NVML components are available; confirm the component list and test events before collecting results.
+The Dockerfile now propagates PAPI build/install failures. A successful Docker build alone still does not prove counter access; confirm components and run the instrumented benchmark.
 
 ### XSBench CUDA smoke test
 

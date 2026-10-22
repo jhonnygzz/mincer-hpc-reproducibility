@@ -1,6 +1,11 @@
 # MINCER Historical Testing Report
 
-> **Scope note:** This report records earlier runs on a provisioned Linux system, not tests of the current source-free GitHub distribution or the new benchmark guides. The examples, custom PAPI-modified sources, images, and datasets used in those runs are not included in the intended public repository. Re-run on the target Chameleon nodes before treating any workflow as currently verified.
+> **Scope note:** This report records earlier runs on a provisioned Linux system, not validation of the current distribution. Most historical workload sources, images, and datasets are excluded. The newly included source-only XSBench CUDA example has separate current validation below.
+
+**Current NVIDIA testing:** The repository now includes the source-only XSBench
+CUDA example. Its October 2026 test results and remaining limitations are
+recorded separately in [NVIDIA validation](docs/nodes/nvidia-validation.md).
+The historical entries below do not establish current CPU/AMD support.
 
 ## ✅ Test Results Summary
 **Date:** September 28, 2025  

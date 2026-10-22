@@ -1,0 +1,4 @@
+.git
+mincer-package/examples
+**/__pycache__
+**/experiment_logs

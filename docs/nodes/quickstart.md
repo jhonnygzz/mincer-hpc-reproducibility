@@ -5,8 +5,8 @@ The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware p
 Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Follow each workflow's documented validation case; do not start with the large medical-imaging workload.
 
 The matrix-multiplication, XSBench, and LULESH CPU workflows have been validated
-on one Xeon Gold 6240R node. The included XSBench HIP workflow has been
-validated on the AMD MI100 node; AMD LULESH and Gunrock remain unvalidated.
+on one Xeon Gold 6240R node. The included XSBench HIP and LULESH HIP workflows
+have been validated on the AMD MI100 node.
 See the [CPU validation record](cpu-validation.md) and
 [README's CPU walkthrough](../../README.md#start-on-cpu) for the measured
 results and shortest setup/run procedure.
@@ -163,11 +163,10 @@ not claim energy measurement.
 
 ## AMD GPU profile: MI100
 
-This profile is validated only for XSBench HIP on the project's dual-MI100
-node (`gfx908`). Other AMD GPUs, ROCm versions, drivers, PAPI event sets, and
-device permissions require their own checks. The run uses the included
-PAPI-instrumented source and default large event-based problem; no separate
-XSBench source clone or dataset is required.
+This profile is validated for XSBench HIP and LULESH HIP on the project's
+dual-MI100 node (`gfx908`). Other AMD GPUs, ROCm versions, drivers, PAPI event
+sets, and device permissions require their own checks. XSBench uses
+`rocp_sdk`; LULESH uses the distinct legacy `rocm` and `rocm_smi` components.
 
 ### Administrator-provisioned prerequisites
 
@@ -214,7 +213,14 @@ if Docker is directly accessible.
 
 See the [AMD validation record](amd-validation.md) for the observed host,
 container, exact counters, measurement scope, and clean-source test.
-AMD LULESH and Gunrock remain unvalidated and are not included here.
+For AMD LULESH, run `MINCER_USE_SUDO_DOCKER=1 bash setup_amd.sh --lulesh`
+once, then invoke MINCER with
+`--path "$PWD/mincer-package/examples/LULESH/hip"`. Require the 96-cubed,
+10-iteration numerical PASS and all five ROCm counters plus three SMI readings;
+see the [LULESH guide](../benchmarks/lulesh.md#amd-hip-prepare-and-run).
+On this node, the legacy ROCm PAPI component fails preflight when selecting GPU
+index 1; GPU index 0 is the validated LULESH target. AMD instructions cover
+the validated XSBench and LULESH examples.
 
 ## NVIDIA GPU profile: RTX 6000
 

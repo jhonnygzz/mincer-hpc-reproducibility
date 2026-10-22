@@ -21,6 +21,13 @@
 !/mincer-package/examples/LULESH/cpu/papi_metrics.cpp
 !/mincer-package/examples/LULESH/cpu/papi_metrics.h
 !/mincer-package/examples/LULESH/cpu/validate_result.h
+!/mincer-package/examples/LULESH/hip/
+/mincer-package/examples/LULESH/hip/*
+!/mincer-package/examples/LULESH/hip/Makefile
+!/mincer-package/examples/LULESH/hip/run.sh
+!/mincer-package/examples/LULESH/hip/monitoring.patch
+!/mincer-package/examples/LULESH/hip/papi_metrics.h
+!/mincer-package/examples/LULESH/hip/check_events.cpp
 !/mincer-package/examples/XSBench/
 /mincer-package/examples/XSBench/*
 !/mincer-package/examples/XSBench/LICENSE

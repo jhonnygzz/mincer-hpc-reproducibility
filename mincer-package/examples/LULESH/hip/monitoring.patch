@@ -1,0 +1,69 @@
+--- a/lulesh.cc
++++ b/lulesh.cc
+@@ -12,6 +12,8 @@
+ #include <unistd.h>
+ 
+ #include "lulesh.h"
++#include "papi_metrics.h"
++#include "validate_result.h"
+ 
+ static Kokkos::View<Real_t*> buffer;
+ static size_t buffer_size;
+@@ -2081,6 +2083,12 @@
+   myRank = 0;
+ #endif
+ 
++  PAPIMetrics metrics;
++  if (!metrics.initialize()) {
++    metrics.cleanup();
++    return EXIT_FAILURE;
++  }
++  int exitStatus = EXIT_FAILURE;
+   Kokkos::initialize();
+   {
+   opts.its = 9999999;
+@@ -2138,8 +2146,12 @@
+   timeval start;
+   gettimeofday(&start, NULL);
+ #endif
++  Kokkos::fence();
++  bool started = metrics.start();
++  bool runOK = started;
++
+-  while ((locDom.time() < locDom.stoptime()) && (locDom.cycle() < opts.its)) {
++  while (started && (locDom.time() < locDom.stoptime()) && (locDom.cycle() < opts.its)) {
+ 
+     TimeIncrement(locDom);
+     LagrangeLeapFrog(locDom);
+ 
+@@ -2149,6 +2162,9 @@
+     }
+   }
+ 
++  Kokkos::fence();
++  if (started && !metrics.stop()) runOK = false;
++
+   double elapsed_time;
+ #if USE_MPI
+   elapsed_time = MPI_Wtime() - start;
+@@ -2174,6 +2190,13 @@
+     VerifyAndWriteFinalOutput(elapsed_timeG, locDom, opts.nx, numRanks);
+   }
+ 
++  auto energy = Kokkos::create_mirror_view_and_copy(
++      Kokkos::HostSpace(), locDom.e_view());
++  if (!validateResult(energy.data(), opts.nx, locDom.cycle())) runOK = false;
++  if (!metrics.printResults()) runOK = false;
++  if (!metrics.cleanup()) runOK = false;
++  exitStatus = runOK ? EXIT_SUCCESS : EXIT_FAILURE;
++
+   buffer = Kokkos::View<Real_t*>();
+   }
+   Kokkos::finalize();
+@@ -2181,5 +2204,5 @@
+   MPI_Finalize();
+ #endif
+ 
+-  return 0;
++  return exitStatus;
+ }

@@ -2,7 +2,91 @@
 
 LULESH is a hydrodynamics proxy application. This repository prepares
 instrumented CPU/OpenMP and NVIDIA CUDA examples from pinned upstream sources.
-Both have been validated on their recorded nodes; AMD remains unvalidated.
+Both have been validated on their recorded nodes. The AMD HIP workflow below
+uses a separate legacy ROCm profiling image, not XSBench's ROCprofiler SDK image.
+
+## AMD HIP: prepare and run
+
+With administrator-approved Docker access and read/write access to `/dev/kfd`
+and the GPU render nodes, run from the repository root:
+
+```bash
+MINCER_USE_SUDO_DOCKER=1 bash setup_amd.sh --lulesh
+MINCER_USE_SUDO_DOCKER=1 "$HOME/.venvs/mincer/bin/python" \
+  mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/LULESH/hip"
+```
+
+Omit `MINCER_USE_SUDO_DOCKER=1` when Docker is directly accessible. Setup uses
+the shared Python environment, prepares pinned dependencies, builds
+`mincer-rocm-legacy:latest`, and preflights the exact five `rocm` counters and
+three `rocm_smi` sensors from the PDF screenshot. The image contains ROCm 6.4.3
+and PAPI 7.2.0, and does not enable `rocp_sdk`. No host packages, drivers,
+security policies, or device ACLs are changed. CPU/NVIDIA setup does not
+download these AMD dependencies.
+
+The launcher always rebuilds from source, using Kokkos 4.6.01 with HIP/OpenMP
+and architecture `AMD_GFX908` (MI100), then runs `-s 96 -i 10`. Build failures
+stop execution rather than running an old binary. Sources are prepared from
+the same pinned Mini-Apps and Kokkos revisions as the NVIDIA example below;
+the original handoff sources are not build dependencies. Full checkouts and
+their upstream notices remain in the ignored `build/` directory. Only generated
+`build/work` is refreshed. Edit the tracked patch/helpers and rerun setup or
+`bash prepare_lulesh_hip.sh`, not generated source files.
+
+The default `MINCER_AMD_DEVICE=0` selects one physical GPU using
+`ROCR_VISIBLE_DEVICES`, with HIP device `0` inside that restricted view.
+The helper matches that HIP device's PCI address to its ROCm SMI index, since
+SMI does not necessarily share HIP's visibility ordering. GPU index 0 is the
+validated LULESH target on this MI100 node. Index 1 passes ROCm device discovery
+but its legacy PAPI ROCm event initialization fails preflight with
+`Insufficient memory`; do not assume it is measurable. On other systems, use a
+different index only after setup preflight succeeds, and keep the selection the
+same for setup and run.
+`MINCER_AMD_LEGACY_IMAGE` overrides the image; `MINCER_LULESH_THREADS` overrides
+the default single host OpenMP thread. Compilation uses the invoking account's
+UID/GID without GPU devices. Measurement uses container root with all
+capabilities dropped, explicitly passed GPU devices, read-only root/workload
+filesystems, and no privileged or unconfined-seccomp option.
+
+### AMD numerical and measurement checks
+
+Require the 96-cubed problem (884,736 elements), exactly 10 iterations,
+origin energy near `3.833852e+08`, printed symmetry diagnostics, and
+`LULESH numerical correctness: PASS`. The shared CPU numerical validator also
+requires finite, nonnegative element energies, relative origin-energy tolerance
+`1e-6`, and plane-zero symmetry tolerance
+`1e-10 * max(1, abs(a), abs(b))`.
+
+Require `PAPI measurement: PASS`, successful process status, and all eight
+event readings:
+
+- `rocm:::SQ_INSTS_SALU:device=0`
+- `rocm:::SQ_INSTS_VALU:device=0`
+- `rocm:::SQ_WAVES:device=0`
+- `rocm:::TCC_HIT_sum:device=0`
+- `rocm:::TCC_MISS_sum:device=0`
+- `rocm_smi:::busy_percent:device=<matched-index>` in percent
+- `rocm_smi:::power_average:device=<matched-index>:sensor=0` in microwatts
+- `rocm_smi:::temp_current:device=<matched-index>:sensor=0` in millidegrees Celsius
+
+PAPI initializes legacy profiling before HIP/Kokkos. Required component,
+event-query/addition, start/stop, synchronization, and cleanup failures return
+nonzero with errors. Kokkos fences bound the measured time-stepping loop.
+No partially populated event list or uninitialized values are reported.
+SMI readings are endpoint samples of driver-reported values, not whole-run
+averages. Power is not energy, instructions are not FLOPs, and the VALU share
+of instruction counts is not GPU utilization. Only the TCC hit fraction is
+derived, using hits divided by hits plus misses when the denominator is nonzero.
+GPU counters and sensors can include other users' activity on the same GPU;
+device selection is not exclusive scheduling.
+
+Compiler diagnostics are saved separately under the example's
+`build/build_<timestamp>.log`; MINCER saves `output.txt` and its execution log
+under `experiment_logs/run_<timestamp>/`. Setup diagnostics are under the
+repository's ignored `build/`. A skipped MINCER reference comparison is not
+a numerical correctness pass. See the [AMD validation record](../nodes/amd-validation.md)
+for actual results and validation status.
 
 ## CPU: prepare and run
 
@@ -253,5 +337,5 @@ This enabled CUDA and NVML readings on this RTX 6000. It does not establish that
 all other PAPI/Kokkos/GPU combinations are supported.
 
 See the [NVIDIA validation record](../nodes/nvidia-validation.md) for measured
-values and environment details. HIP remains a separate future workflow; the
+values and environment details. HIP uses the separate workflow above; the
 uploaded machine-specific launchers are not portable instructions.

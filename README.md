@@ -6,7 +6,7 @@ MINCER is a research toolkit for documenting HPC computing environments and capt
 
 - MINCER's environment-manifest and experiment-log utilities in `mincer-package/`.
 - Dockerfiles for CPU, NVIDIA CUDA, and AMD ROCm/PAPI environments.
-- Human-readable guides for acquiring and running the benchmark workloads.
+- Guides for setting up and running the benchmark workloads.
 - A [node quick start](docs/nodes/quickstart.md) with Cascade Lake CPU, MI100, and RTX 6000 hardware profiles. These are validation targets; MINCER users should adapt the steps to their own nodes.
 
 The PAPI-instrumented XSBench CPU/OpenMP and CUDA examples are included with
@@ -171,14 +171,35 @@ report power or temperature. See the
 [AMD validation record](docs/nodes/amd-validation.md) and
 [XSBench guide](docs/benchmarks/xsbench.md#included-amd-hip-example).
 
+For the separately instrumented AMD LULESH HIP workflow, prepare the legacy
+ROCm/PAPI image and pinned Kokkos sources once, then run the PDF case through
+MINCER:
+
+```bash
+MINCER_USE_SUDO_DOCKER=1 bash setup_amd.sh --lulesh
+MINCER_USE_SUDO_DOCKER=1 "$HOME/.venvs/mincer/bin/python" \
+  mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/LULESH/hip"
+```
+
+This uses legacy PAPI `rocm`/`rocm_smi`, not XSBench's `rocp_sdk`. Inspect
+`output.txt` for `LULESH numerical correctness: PASS`,
+`PAPI measurement: PASS`, five GPU counters, and three SMI sensor readings.
+See the [LULESH guide](docs/benchmarks/lulesh.md#amd-hip-prepare-and-run) and
+[AMD validation record](docs/nodes/amd-validation.md). GPU index 0 is the
+validated LULESH target on this node; index 1's legacy PAPI event initialization
+failed preflight.
+
 ## Current status
 
 The XSBench, LULESH, and Gunrock CUDA workflows have been tested on a Quadro
 RTX 6000; see the validation record above. CPU matrix multiplication,
 XSBench OpenMP, and LULESH/Kokkos are validated on the same CPU node; see the
 [CPU validation record](docs/nodes/cpu-validation.md).
-The included XSBench HIP workflow is validated on the AMD MI100 node; AMD
-LULESH and Gunrock remain unvalidated and are not part of this setup.
+The included XSBench HIP and LULESH HIP workflows are validated on the AMD
+MI100 node. See the
+[AMD validation record](docs/nodes/amd-validation.md) for scope and
+measurements.
 
 Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
 

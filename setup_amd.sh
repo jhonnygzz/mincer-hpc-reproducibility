@@ -8,13 +8,20 @@ BUILD_DIR="$ROOT/build"
 HIP_DIR="$ROOT/mincer-package/examples/XSBench/hip"
 AMD_DEVICE="${MINCER_AMD_DEVICE:-0}"
 DOCKER=(docker)
+MODE=xsbench
+if [[ "$#" == 1 && "$1" == --lulesh ]]; then
+    MODE=lulesh
+    IMAGE="${MINCER_AMD_LEGACY_IMAGE:-mincer-rocm-legacy:latest}"
+    HIP_DIR="$ROOT/mincer-package/examples/LULESH/hip"
+    shift
+fi
 
 fail() {
     echo "ERROR: $*" >&2
     exit 1
 }
 
-[[ "$#" == 0 ]] || fail "Usage: bash setup_amd.sh"
+[[ "$#" == 0 ]] || fail "Usage: bash setup_amd.sh [--lulesh]"
 [[ "$AMD_DEVICE" =~ ^[0-9]+$ ]] ||
     fail "MINCER_AMD_DEVICE must be a nonnegative GPU index."
 command -v docker >/dev/null ||
@@ -45,6 +52,12 @@ GPU_VISIBILITY_OPTIONS=(
     --env "ROCR_VISIBLE_DEVICES=$AMD_DEVICE"
     --env "HIP_VISIBLE_DEVICES=$AMD_DEVICE"
 )
+if [[ "$MODE" == lulesh ]]; then
+    GPU_VISIBILITY_OPTIONS=(
+        --env "ROCR_VISIBLE_DEVICES=$AMD_DEVICE"
+        --env HIP_VISIBLE_DEVICES=0
+    )
+fi
 for device in "${render_nodes[@]}"; do
     [[ -c "$device" && -r "$device" && -w "$device" ]] ||
         fail "This account needs read/write access to $device. Ask the node administrator."
@@ -62,7 +75,12 @@ fi
 mkdir -p "$BUILD_DIR"
 BUILD_LOG="$BUILD_DIR/amd-image-build_$(date -u +%Y-%m-%dT%H-%M-%S-%N).log"
 echo "Building $IMAGE (details saved to $BUILD_LOG)"
-if ! "${DOCKER[@]}" build -f "$ROOT/Dockerfile.amdrocpsdk" \
+DOCKERFILE="$ROOT/Dockerfile.amdrocpsdk"
+if [[ "$MODE" == lulesh ]]; then
+    DOCKERFILE="$ROOT/Dockerfile.rocm"
+    bash "$ROOT/prepare_lulesh_hip.sh"
+fi
+if ! "${DOCKER[@]}" build -f "$DOCKERFILE" \
     -t "$IMAGE" "$ROOT" >"$BUILD_LOG" 2>&1; then
     echo "ERROR: AMD image build failed. Full diagnostics: $BUILD_LOG" >&2
     tail -n 40 "$BUILD_LOG" >&2
@@ -91,6 +109,24 @@ if ! "${DOCKER[@]}" run --rm "${DEVICE_OPTIONS[@]}" "${GPU_VISIBILITY_OPTIONS[@]
     echo "ERROR: PAPI component inspection failed. Full diagnostics: $COMPONENT_LOG" >&2
     tail -n 30 "$COMPONENT_LOG" >&2
     exit 1
+fi
+if [[ "$MODE" == lulesh ]]; then
+    EVENT_LOG="$BUILD_DIR/amd-lulesh-events_$(date -u +%Y-%m-%dT%H-%M-%S-%N).log"
+    if ! "${DOCKER[@]}" run --rm "${DEVICE_OPTIONS[@]}" \
+        -e "ROCR_VISIBLE_DEVICES=$AMD_DEVICE" -e HIP_VISIBLE_DEVICES=0 \
+        --cap-drop=ALL --user 0:0 --read-only --tmpfs /tmp:rw,exec,nosuid,size=64m \
+        -v "$HIP_DIR:/workspace:ro" -w /workspace "$IMAGE" bash -euc '
+            hipcc -O2 -I/usr/local/include check_events.cpp -L/usr/local/lib \
+                -lpapi -lrocm_smi64 -o /tmp/check_events
+            /tmp/check_events
+        ' >"$EVENT_LOG" 2>&1; then
+        echo "ERROR: Required LULESH ROCm/SMI events unavailable. Diagnostics: $EVENT_LOG" >&2
+        tail -n 40 "$EVENT_LOG" >&2
+        exit 1
+    fi
+    cat "$EVENT_LOG"
+    echo "LULESH HIP setup complete. Run through MINCER with --path \"$HIP_DIR\"."
+    exit 0
 fi
 grep -F 'rocp_sdk' "$COMPONENT_LOG" ||
     fail "PAPI rocp_sdk is not listed. Diagnostics: $COMPONENT_LOG"

@@ -1,8 +1,8 @@
 # Node quick start and hardware profiles
 
-The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware profiles used for the project owner's planned validation on Chameleon. They are examples, not requirements for MINCER users: users should run the relevant CPU, AMD, or NVIDIA workflow on their **own** Linux nodes with compatible processors/GPUs, drivers, and container support.
+The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware profiles used for the project's planned validation on Chameleon. Users should run the relevant CPU, AMD, or NVIDIA workflow on their own Linux nodes with compatible processors/GPUs, drivers, and container support.
 
-Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Follow each workflow's documented validation case; do not start with the large medical-imaging workload.
+Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Follow each workflow's documented validation case.
 
 The matrix-multiplication, XSBench, and LULESH CPU workflows have been validated
 on one Xeon Gold 6240R node. The included XSBench HIP and LULESH HIP workflows
@@ -18,7 +18,7 @@ steps for those three instrumented examples.
 
 ## 1. Get the repository
 
-The GitHub repository is private. The repository owner must add each tester's GitHub account as a collaborator before they clone it. On the node, authenticate with GitHub CLI (`gh auth login --web`) or the site's approved Git credential method, then clone over HTTPS. GitHub account passwords are not accepted for Git operations; never put an access token in a command, URL, or shared log.
+First clone the repository and enter it:
 
 ```bash
 git clone https://github.com/jhonnygzz/mincer-hpc-reproducibility.git \
@@ -62,8 +62,6 @@ If this node's direct Docker check is denied but the administrator has approved
 non-interactive sudo Docker access, check with `sudo -n docker version` instead.
 The CPU commands below select that path explicitly with
 `MINCER_USE_SUDO_DOCKER=1`; omit the variable when direct access works.
-
-Record the output in your test notes, but remove usernames, access tokens, and other private values before sharing logs.
 
 ## CPU profile: Cascade Lake R
 
@@ -314,16 +312,3 @@ python mincer-package/run_experiment.py \
 ```
 
 The [Gunrock guide](../benchmarks/gunrock.md) is another NVIDIA GPU test.
-[PyTorch 3D U-Net](../benchmarks/pytorch-3dunet.md) is deferred and not validated:
-its uploaded HDF5 inputs are truncated, complete originals are unavailable, and
-data conversion remains undocumented. It is excluded from the current walkthrough.
-
-## What to send back after each node test
-
-For each workload, report:
-
-1. Node type, date, OS/kernel, CPU/GPU model, and driver/runtime versions.
-2. Exact command, exit status, and relevant build/runtime errors.
-3. Whether the benchmark completed and whether its checksum or correctness validation passed.
-4. PAPI components/events that were actually available, separately from events that failed.
-5. The path to the generated MINCER log. Keep dataset files, model weights, tokens, and private credentials out of the repository and shared logs.

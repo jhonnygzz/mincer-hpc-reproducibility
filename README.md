@@ -1,6 +1,6 @@
 # MINCER: Reproducible HPC Performance Experiments
 
-MINCER is a research toolkit for documenting computing environments and capturing experiment output alongside performance measurements from PAPI and GPU monitoring components.
+MINCER is a research toolkit for documenting HPC computing environments and capturing experiment output alongside performance measurements from PAPI and GPU monitoring components.
 
 ## What this repository contains
 

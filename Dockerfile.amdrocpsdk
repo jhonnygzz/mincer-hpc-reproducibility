@@ -1,89 +1,43 @@
-# Use Ubuntu 22.04 as base image
-FROM ubuntu:22.04
+# ROCm 6.4.3 supports gfx908 and the MI100 observed on the AMD node.
+FROM rocm/dev-ubuntu-22.04:6.4.3@sha256:09965ffc0f15be19637dabd818320687c7bb9aa7ea7ab57c1d2f1f388f8e7c05
 
-# Set build arguments
-ARG UBUNTU_VERSION=22.04
 ARG PAPI_VERSION=7.2.0
+ARG PAPI_SHA256=a9bff89ccf39915d729e08ae0a0c6a71ce0ebbe98411e9a2eb3c83c8db0af39c
 
-# Set environment variables to avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
-
-# Update package list first
-RUN apt-get update
-
-# Install Python setuptools and wheel
-RUN apt-get install -y python3-setuptools python3-wheel
-
-# Install environment modules
-RUN apt-get install -y environment-modules
-
-# Install wget and curl for downloading
-RUN apt-get install -y wget curl
-
-# Install AMD GPU drivers and ROCm
-RUN wget https://repo.radeon.com/amdgpu-install/6.4.3/ubuntu/jammy/amdgpu-install_6.4.60403-1_all.deb && \
-    apt-get install -y ./amdgpu-install_6.4.60403-1_all.deb && \
-    apt-get update && \
-    amdgpu-install -y --usecase=rocm --no-dkms && \
-    rm -f amdgpu-install_6.4.60403-1_all.deb
-
-# Set ROCm environment variables
 ENV ROCM_PATH=/opt/rocm
-ENV PATH=$ROCM_PATH/bin:$PATH
-ENV LD_LIBRARY_PATH=$ROCM_PATH/lib:$LD_LIBRARY_PATH
-
-# Set PAPI ROCm environment variables
-ENV PAPI_ROCM_ROOT=/opt/rocm
-ENV PAPI_ROCMSMI_ROOT=/opt/rocm
 ENV PAPI_ROCP_SDK_ROOT=/opt/rocm
-ENV HSA_TOOLS_LIB=/opt/rocm/lib/librocprofiler64.so
-ENV ROCP_TOOL_LIB=/opt/rocm/lib/librocprofiler64.so
-ENV PAPI_ROCP_SDK_LIB=/opt/rocm/lib/librocprofiler-sdk.so
+ENV PATH=/opt/rocm/bin:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/lib:/opt/rocm/lib:/opt/rocm/lib64
 
-# Install additional dependencies for PAPI with ROCm
-RUN apt-get install -y \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     build-essential \
+    ca-certificates \
+    curl \
+    libpfm4-dev \
+    pkg-config \
     wget \
     tar \
     gzip \
-    gcc \
-    g++ \
-    make \
-    libpfm4-dev \
-    linux-tools-generic \
-    pkg-config \
-    cmake \
-    git \
-    autoconf \
-    automake \
-    libtool \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and build PAPI with ROCm support including rocp_sdk
-RUN wget http://icl.utk.edu/projects/papi/downloads/papi-${PAPI_VERSION}.tar.gz && \
-    tar -xzf papi-${PAPI_VERSION}.tar.gz && \
-    cd papi-${PAPI_VERSION}/src && \
+RUN curl -fsSLo /tmp/papi-${PAPI_VERSION}.tar.gz \
+        "https://icl.utk.edu/projects/papi/downloads/papi-${PAPI_VERSION}.tar.gz" && \
+    echo "${PAPI_SHA256}  /tmp/papi-${PAPI_VERSION}.tar.gz" | sha256sum -c - && \
+    tar -xzf /tmp/papi-${PAPI_VERSION}.tar.gz -C /tmp && \
+    cd /tmp/papi-${PAPI_VERSION}/src && \
     ./configure --prefix=/usr/local \
-                --with-components="rocm_smi rocp_sdk" \
-                --with-rocm=/opt/rocm \
-                --with-rocm-include=/opt/rocm/include \
-                --with-rocm-lib=/opt/rocm/lib \
-                CPPFLAGS="-I/opt/rocm/include -I/opt/rocm/include/hsa -I/opt/rocm/include/rocprofiler -I/opt/rocm/include/hip -I/opt/rocm/include/rocprofiler-sdk" \
-                LDFLAGS="-L/opt/rocm/lib" && \
-    make -j$(nproc) libpfm4/lib/libpfm.a && \
-    make -j$(nproc) libpapi.a && \
-    make -j$(nproc) utils && \
+        --with-components=rocp_sdk \
+        --with-rocm="${ROCM_PATH}" \
+        --with-rocm-include="${ROCM_PATH}/include" \
+        --with-rocm-lib="${ROCM_PATH}/lib" && \
+    make -j"$(nproc)" && \
+    make -j"$(nproc)" utils && \
     make install && \
     ldconfig && \
-    cd / && \
-    rm -rf papi-${PAPI_VERSION} papi-${PAPI_VERSION}.tar.gz
+    rm -rf /tmp/papi-${PAPI_VERSION} /tmp/papi-${PAPI_VERSION}.tar.gz
 
-# Set library path
-ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-
-# Create a working directory
 WORKDIR /workspace
-
-# Default command
 CMD ["/bin/bash"]

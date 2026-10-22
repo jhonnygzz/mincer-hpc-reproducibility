@@ -1,8 +1,8 @@
 # XSBench
 
 XSBench is a proxy application for the continuous-energy neutron cross-section
-lookup kernel. This guide covers the validated CPU/OpenMP and NVIDIA CUDA
-examples, plus unvalidated AMD HIP guidance.
+lookup kernel. This guide covers the validated CPU/OpenMP, NVIDIA CUDA, and AMD
+HIP examples.
 
 ## Included NVIDIA CUDA example
 
@@ -79,6 +79,56 @@ reference comparison is not a correctness pass: inspect the checksum and metrics
 See the [validation record](../nodes/nvidia-validation.md) for tested results and
 known limitations. `MINCER_CUDA_IMAGE` overrides the image for setup and launcher;
 `MINCER_VENV` overrides the Python environment location for setup.
+
+## Included AMD HIP example
+
+The source-only AMD HIP implementation is under
+[`hip`](../../mincer-package/examples/XSBench/hip/). It preserves the upstream
+MIT license and instruments the PDF's eight `rocp_sdk` GPU events. The AMD
+container is pinned to ROCm 6.4.3 and PAPI 7.2.0; other AMD nodes must verify
+their GPU architecture, host driver compatibility, device permissions, and
+event support independently.
+
+On an AMD node with approved Docker access and read/write access to `/dev/kfd`
+and the GPU render nodes, prepare the shared Python environment, build the
+image, and preflight the complete event set once. By default, both HIP and PAPI
+see only GPU index `0`, preventing PAPI's multi-agent aggregation from combining
+counts from another visible GPU:
+
+```bash
+MINCER_USE_SUDO_DOCKER=1 bash setup_amd.sh
+```
+
+Omit `MINCER_USE_SUDO_DOCKER=1` when Docker is directly accessible. Setup does
+not install host packages or drivers, change device permissions or host policy,
+request extra capabilities, or use `--privileged`. Run the example through
+MINCER. Set the same `MINCER_AMD_DEVICE` value for setup and run to select
+another GPU index:
+
+```bash
+MINCER_USE_SUDO_DOCKER=1 "$HOME/.venvs/mincer/bin/python" \
+  mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/XSBench/hip"
+```
+
+The launcher builds for `gfx908` by default; use `MINCER_AMD_ARCH` only when
+the node's compatible architecture is different. It targets device index `0`
+by default, configurable with `MINCER_AMD_DEVICE`. It runs the PDF's default
+large event-based case (17,000,000 lookups), not the historical launcher's
+small case. Require `Verification checksum: 952131 (Valid)` and one measured
+raw count for each of these exact event names:
+`SQ_INSTS_SALU`, `SQ_INSTS_VALU`, `TCC_HIT`, `TCC_MISS`,
+`TCC_EA_RDREQ_32B`, `TCC_EA_WRREQ_64B`, `SQ_INSTS_VMEM_RD`, and
+`SQ_INSTS_VMEM_WR`. The output also derives a TCC hit fraction from the hit
+and miss counts. These are not FLOP counts; the workflow does not sample power
+or temperature. Failed initialization, event addition, start/stop,
+synchronization, cleanup, or checksum validation produces a nonzero result.
+
+MINCER saves output and its execution log under
+`mincer-package/examples/XSBench/hip/experiment_logs/run_<timestamp>/`.
+Compiler and PAPI preflight diagnostics are retained under the ignored
+repository `build/` directory. See the [AMD validation record](../nodes/amd-validation.md)
+for the tested node, observed results, measurement scope, and source-only test.
 
 ## Included CPU OpenMP example
 
@@ -237,13 +287,10 @@ make
 ./XSBench -m event
 ```
 
-For an AMD node, use the HIP implementation directory and ROCm/HIP compiler:
-
-```bash
-cd "$HOME/mincer-workloads/XSBench/hip"
-make
-./XSBench -s small -m event
-```
+For AMD, use the included, instrumented workflow above rather than the
+historical external HIP launcher. The AMD PDF's large event-based run is the
+validated case; an independent upstream clone does not contain MINCER's PAPI
+instrumentation.
 
 Exact command-line options and compiler settings are documented in the upstream [XSBench README](https://github.com/ANL-CESAR/XSBench).
 
@@ -262,9 +309,9 @@ Use the `cuda` or `hip` directory for the corresponding accelerator. The experim
 
 No external dataset is required. Record the verification checksum and whether XSBench reports it as valid. Previously recorded CPU and accelerator output values are hardware-specific examples, not thresholds for a new node.
 
-The included CPU/OpenMP and CUDA workflows are validated only on their
-respective recorded nodes; HIP remains unvalidated. The CPU launcher uses the
-shared opt-ins `MINCER_ALLOW_CPU_PROFILING=1` (counter capability) and
+The included CPU/OpenMP, CUDA, and AMD HIP workflows are validated only on
+their respective recorded nodes. The CPU launcher uses the shared opt-ins
+`MINCER_ALLOW_CPU_PROFILING=1` (counter capability) and
 `MINCER_USE_SUDO_DOCKER=1` (only if approved sudo Docker is needed), matching
 the matrix example. Check available memory, PAPI event availability, and node
-permissions before adapting the workflow to another CPU.
+permissions before adapting the workflow to another CPU or GPU.

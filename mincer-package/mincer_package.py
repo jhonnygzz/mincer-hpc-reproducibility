@@ -105,24 +105,34 @@ def detect_gpus():
             except Exception as e:
                 print(f"Warning: Could not get AMD GPU details: {e}")
         
-        # Fallback: check lspci for AMD GPUs if rocm-smi not available
+        # Fall back to PCI enumeration because ROCm utilities are not required
+        # on the host when the benchmark runs in a ROCm container.
         if not amd_gpus:
             try:
-                result = subprocess.check_output("lspci | grep -i 'vga.*amd\\|vga.*radeon\\|3d.*amd\\|3d.*radeon'", shell=True, text=True)
-                for line in result.strip().split('\n'):
-                    if line.strip():
-                        # Extract GPU name from lspci output
-                        parts = line.split(':')
-                        if len(parts) >= 3:
-                            gpu_info = parts[2].strip()
-                            amd_gpus.append({
-                                'type': 'AMD GPU',
-                                'name': gpu_info,
-                                'memory_mb': 'Unknown',
-                                'driver': 'Unknown'
-                            })
-            except Exception:
-                pass
+                result = subprocess.check_output(["lspci", "-nn"], text=True)
+            except (OSError, subprocess.CalledProcessError):
+                result = ""
+
+            display_classes = (
+                "vga compatible controller",
+                "3d controller",
+                "display controller",
+            )
+            for line in result.splitlines():
+                lowered = line.lower()
+                if "[1002:" not in lowered or not any(
+                    device_class in lowered for device_class in display_classes
+                ):
+                    continue
+                address, _, details = line.partition(" ")
+                _, _, device_name = details.partition(":")
+                device_name = device_name.split("[1002:", 1)[0].strip()
+                amd_gpus.append({
+                    'type': 'AMD GPU',
+                    'name': f"{address}: {device_name}",
+                    'memory_mb': 'Unknown',
+                    'driver': 'Unknown'
+                })
                 
         return amd_gpus
     

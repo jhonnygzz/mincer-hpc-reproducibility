@@ -2,10 +2,11 @@
 
 The Cascade Lake CPU, AMD Instinct MI100, and NVIDIA RTX 6000 are the hardware profiles used for the project owner's planned validation on Chameleon. They are examples, not requirements for MINCER users: users should run the relevant CPU, AMD, or NVIDIA workflow on their **own** Linux nodes with compatible processors/GPUs, drivers, and container support.
 
-Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Begin with a small smoke test; do not start with the large medical-imaging workload.
+Adapt image versions, GPU architecture/compiler options, device access, thread counts, benchmark sizes, memory needs, and PAPI event selection to your hardware and administrator policies. A command that works on one of the three example nodes may need adjustment or may not be supported on another node. Follow each workflow's documented validation case; do not start with the large medical-imaging workload.
 
 The matrix-multiplication, XSBench, and LULESH CPU workflows have been validated
-on one Xeon Gold 6240R node; the AMD commands below remain test plans.
+on one Xeon Gold 6240R node. The included XSBench HIP workflow has been
+validated on the AMD MI100 node; AMD LULESH and Gunrock remain unvalidated.
 See the [CPU validation record](cpu-validation.md) and
 [README's CPU walkthrough](../../README.md#start-on-cpu) for the measured
 results and shortest setup/run procedure.
@@ -162,87 +163,58 @@ not claim energy measurement.
 
 ## AMD GPU profile: MI100
 
-Use this section as the project's AMD validation profile. For another AMD accelerator, verify that its GPU architecture is supported by the host driver, ROCm container, and benchmark toolchain. Update architecture-specific compiler options when needed.
+This profile is validated only for XSBench HIP on the project's dual-MI100
+node (`gfx908`). Other AMD GPUs, ROCm versions, drivers, PAPI event sets, and
+device permissions require their own checks. The run uses the included
+PAPI-instrumented source and default large event-based problem; no separate
+XSBench source clone or dataset is required.
 
-### Check host GPU and container access
+### Administrator-provisioned prerequisites
 
-On the host:
+Use a compatible host driver, Docker, Python 3 with venv support, and approved
+Docker access. The benchmark account needs read/write access to `/dev/kfd` and
+the relevant `/dev/dri/renderD*` nodes. Arrange these permissions with the
+administrator; setup and launch do not grant them or modify host policy. The
+validated node used `sudo -n docker`, and `/dev/kfd` access was explicitly
+granted to the test account. That device ACL may not survive device recreation
+or reboot.
 
-```bash
-rocminfo
-rocm-smi
-ls -l /dev/kfd /dev/dri
-```
+### Setup once and run through MINCER
 
-Confirm the expected MI100 appears and that the account has approved access to the GPU device files. Do not install or replace host GPU drivers from inside a container.
-
-### Build and check the ROCm/PAPI image
-
-From the repository root:
-
-```bash
-docker build -f Dockerfile.rocm -t mincer-papi-rocm:latest .
-docker run --rm \
-  --device=/dev/kfd \
-  --device=/dev/dri \
-  --security-opt seccomp=unconfined \
-  mincer-papi-rocm:latest \
-  bash -lc 'rocminfo && papi_component_avail && papi_avail'
-```
-
-The Dockerfile installs a ROCm 6.4.3 user-space stack. Confirm that it is compatible with the provisioned host driver before building or running. If the build or device check fails, save the error and ask the node administrator to confirm the supported host/ROCm combination; do not attempt to install kernel drivers inside the container.
-
-### XSBench HIP smoke test
-
-If XSBench is not already on this node, clone it outside the MINCER checkout:
+From the repository root, build the pinned ROCm/PAPI image and preflight the
+visible GPU architecture plus all eight required `rocp_sdk` events. The
+default index `0` is exposed to both HIP and PAPI, keeping the measurements
+scoped to one GPU on a multi-GPU node:
 
 ```bash
-mkdir -p "$HOME/mincer-workloads"
-git clone https://github.com/ANL-CESAR/XSBench.git \
-  "$HOME/mincer-workloads/XSBench"
+MINCER_USE_SUDO_DOCKER=1 bash setup_amd.sh
 ```
 
-Compile and run the small HIP example:
+Omit the variable when the account can access Docker directly. Setup only
+changes the user's shared Python environment and builds a container image; it
+does not install host packages/drivers, change device ACLs, weaken seccomp, add
+capabilities, or use `--privileged`. To select another GPU, set the same
+`MINCER_AMD_DEVICE` index for setup and the run.
+
+Run the included workload through MINCER:
 
 ```bash
-docker run --rm \
-  --device=/dev/kfd \
-  --device=/dev/dri \
-  --security-opt seccomp=unconfined \
-  -v "$HOME/mincer-workloads/XSBench:/work/XSBench" \
-  -w /work/XSBench/hip \
-  mincer-papi-rocm:latest \
-  bash -lc 'make clean && make && ./XSBench -s small -m event'
+MINCER_USE_SUDO_DOCKER=1 "$HOME/.venvs/mincer/bin/python" \
+  mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/XSBench/hip"
 ```
 
-Check that the program completes and reports a valid checksum. As with the CPU smoke test, an upstream checkout does not contain MINCER's custom PAPI instrumentation. Only add a `run.sh` and invoke `run_experiment.py` after the uninstrumented smoke test works; the launcher must pass the GPU device options above and compile/run in the container.
+Inspect `output.txt` beneath the printed timestamped `experiment_logs/` path.
+Require the valid `952131` checksum, eight named `rocp_sdk` readings, and a
+successful MINCER run status. A checksum by itself does not establish that PAPI
+collection succeeded. Build and preflight diagnostics are kept in the ignored
+repository `build/` directory. The setup and launch command on this node use
+the administrator-approved `sudo -n docker` path; omit the environment prefix
+if Docker is directly accessible.
 
-For example, create this launcher in the external HIP workload directory:
-
-```bash
-cat > "$HOME/mincer-workloads/XSBench/hip/run.sh" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-docker run --rm \
-  --device=/dev/kfd \
-  --device=/dev/dri \
-  --security-opt seccomp=unconfined \
-  -v "$SCRIPT_DIR:/work" \
-  -w /work \
-  mincer-papi-rocm:latest \
-  bash -lc 'make clean && make && ./XSBench -s small -m event'
-EOF
-```
-
-Then, from the MINCER repository root:
-
-```bash
-python mincer-package/run_experiment.py \
-  --path "$HOME/mincer-workloads/XSBench/hip"
-```
-
-Then continue with the AMD variants in [LULESH](../benchmarks/lulesh.md) and [Gunrock](../benchmarks/gunrock.md). The AMD ROCm/MLPerf 3D U-Net example is excluded from this repository's test instructions.
+See the [AMD validation record](amd-validation.md) for the observed host,
+container, exact counters, measurement scope, and clean-source test.
+AMD LULESH and Gunrock remain unvalidated and are not included here.
 
 ## NVIDIA GPU profile: RTX 6000
 

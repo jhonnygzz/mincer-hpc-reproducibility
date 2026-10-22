@@ -136,13 +136,49 @@ normal, but does not establish correctness. See the
 [LULESH guide](docs/benchmarks/lulesh.md) and
 [Gunrock guide](docs/benchmarks/gunrock.md) for details and build-log locations.
 
+## Start with XSBench on AMD
+
+On an AMD ROCm-compatible Linux node, arrange Docker access and read/write
+access to `/dev/kfd` and the GPU render nodes with the administrator. From the
+repository root, set up the shared Python environment, build the pinned
+ROCm/PAPI image, and check the visible GPU architecture and all eight required
+PAPI events once. Both HIP and PAPI are restricted to GPU index `0` by default,
+so counters from another visible GPU cannot be combined:
+
+```bash
+MINCER_USE_SUDO_DOCKER=1 bash setup_amd.sh
+```
+
+Omit `MINCER_USE_SUDO_DOCKER=1` when Docker is directly accessible to your
+account. Setup does not install host packages or drivers, change device
+permissions, change security policy, or request privileged container access.
+Set the same `MINCER_AMD_DEVICE` value for setup and the run to select another
+GPU index. Then run the included HIP example through MINCER:
+
+```bash
+MINCER_USE_SUDO_DOCKER=1 "$HOME/.venvs/mincer/bin/python" \
+  mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/XSBench/hip"
+```
+
+Check the saved `output.txt` for `Verification checksum: 952131 (Valid)` and
+all eight named `rocp_sdk` measurements. A passing checksum alone does not mean
+profiling succeeded. Build and preflight diagnostics are saved under the
+ignored repository `build/` directory; MINCER output and its execution log are
+saved under the HIP example's `experiment_logs/` directory. The AMD workflow
+collects the PDF's eight PAPI GPU counters for the selected GPU; it does not
+report power or temperature. See the
+[AMD validation record](docs/nodes/amd-validation.md) and
+[XSBench guide](docs/benchmarks/xsbench.md#included-amd-hip-example).
+
 ## Current status
 
 The XSBench, LULESH, and Gunrock CUDA workflows have been tested on a Quadro
 RTX 6000; see the validation record above. CPU matrix multiplication,
 XSBench OpenMP, and LULESH/Kokkos are validated on the same CPU node; see the
 [CPU validation record](docs/nodes/cpu-validation.md).
-AMD workflows remain drafts. AMD setup is not provided.
+The included XSBench HIP workflow is validated on the AMD MI100 node; AMD
+LULESH and Gunrock remain unvalidated and are not part of this setup.
 
 Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
 
@@ -209,6 +245,8 @@ For fresh Chameleon allocations, start with the [node-specific quick start](docs
 ## Testing and provenance
 
 [`TESTING_REPORT.md`](TESTING_REPORT.md) records historical results from a previously provisioned Linux/AMD MI100 environment. Current NVIDIA results are recorded separately in the [NVIDIA validation record](docs/nodes/nvidia-validation.md). Re-run benchmarks on each target node; historical output does not establish support for another hardware/software configuration. Share logs only after checking for sensitive information and large artifacts.
+The current AMD XSBench HIP validation is recorded separately in the
+[AMD validation record](docs/nodes/amd-validation.md).
 
 ## Attribution
 

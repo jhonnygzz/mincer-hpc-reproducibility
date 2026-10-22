@@ -14,7 +14,7 @@ if [[ "${1:-}" == "--install-system" && "$#" == 1 ]]; then
     command -v nvidia-smi >/dev/null || fail "Ask your administrator to install the NVIDIA driver first."
     nvidia-smi >/dev/null
     sudo apt-get update
-    sudo apt-get install -y docker.io python3-venv curl gnupg
+    sudo apt-get install -y docker.io python3-venv curl gnupg git patch
     if ! command -v nvidia-ctk >/dev/null; then
         curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey |
             sudo gpg --dearmor --yes -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -51,4 +51,6 @@ python3 -m venv "$VENV"
 "${DOCKER[@]}" run --rm --gpus all "$IMAGE" \
     bash -euc 'nvidia-smi; papi_component_avail; papi_avail'
 echo "Image and GPU checks completed. Counter collection still requires the benchmark test."
+bash "$ROOT/prepare_lulesh_cuda.sh"
 echo "Run: \"$VENV/bin/python\" \"$ROOT/mincer-package/run_experiment.py\" --path \"$ROOT/mincer-package/examples/XSBench/cuda\""
+echo "LULESH: \"$VENV/bin/python\" \"$ROOT/mincer-package/run_experiment.py\" --path \"$ROOT/mincer-package/examples/LULESH/cuda\""

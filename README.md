@@ -9,7 +9,7 @@ MINCER is a research toolkit for documenting HPC computing environments and capt
 - Human-readable guides for acquiring and running the benchmark workloads.
 - A [node quick start](docs/nodes/quickstart.md) with Cascade Lake CPU, MI100, and RTX 6000 hardware profiles. These are validation targets; MINCER users should adapt the steps to their own nodes.
 
-The small PAPI-instrumented XSBench CUDA example is included with its upstream license. Other benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are excluded. Follow [the benchmark guides](docs/benchmarks/README.md) for those workloads.
+The small PAPI-instrumented XSBench CUDA example is included with its upstream license. LULESH CUDA uses pinned upstream downloads plus a small instrumentation patch. Other benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are excluded. Follow [the benchmark guides](docs/benchmarks/README.md) for those workloads.
 
 ## Start with XSBench on NVIDIA
 
@@ -27,6 +27,9 @@ It uses sudo, adds NVIDIA's package repository when needed, and restarts Docker;
 it refuses that restart when Docker has running containers. It does not install
 GPU drivers, change Docker group membership, or change host profiling policy.
 
+Setup also downloads pinned LULESH and Kokkos sources into an ignored build
+directory. For that example, see the [LULESH CUDA guide](docs/benchmarks/lulesh.md).
+
 If the host restricts GPU profiling, the default experiment fails explicitly.
 Only with administrator approval, use the opt-in capability described in the
 [XSBench guide](docs/benchmarks/xsbench.md). See the
@@ -34,7 +37,7 @@ Only with administrator approval, use the opt-in capability described in the
 
 ## Current status
 
-The included XSBench CUDA workflow has been tested on a Quadro RTX 6000; see the validation record above. Other workload guides remain preparation drafts. CPU and AMD setup scripts are not yet provided.
+The XSBench and LULESH CUDA workflows have been tested on a Quadro RTX 6000; see the validation record above. Other workload guides remain preparation drafts. CPU and AMD setup scripts are not yet provided.
 
 Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
 

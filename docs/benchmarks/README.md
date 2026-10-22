@@ -4,7 +4,7 @@ These guides describe the intended MINCER workloads, the upstream locations for 
 
 For first-time setup on the three Chameleon machines, follow the [node quick start](../nodes/quickstart.md).
 
-**Status:** The included [XSBench CUDA workflow](xsbench.md) has been tested on an RTX 6000; see the [validation record](../nodes/nvidia-validation.md). Other workflows remain draft instructions. Do not treat recorded performance counters as expected values for a different node.
+**Status:** [XSBench CUDA](xsbench.md) and [LULESH CUDA](lulesh.md) have been tested on an RTX 6000; see the [validation record](../nodes/nvidia-validation.md). Other workflows remain draft instructions. Do not treat recorded performance counters as expected values for a different node.
 
 | Workload | CPU | NVIDIA | AMD | External data |
 | --- | --- | --- | --- | --- |

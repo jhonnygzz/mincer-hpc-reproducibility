@@ -7,8 +7,8 @@ Intel Xeon Gold 6126, approximately 187.4 GiB RAM, and one Quadro RTX 6000
 with 24 GiB VRAM and NVIDIA driver 560.35.05. The host CUDA compiler is 12.6;
 the experiment builds and runs inside CUDA 12.3.1 / Ubuntu 22.04 with PAPI 7.2.0.
 
-This validates the NVIDIA XSBench example only, not CPU, AMD, other workloads,
-other GPUs, or an unmodified upstream XSBench checkout.
+The following sections validate NVIDIA XSBench and LULESH only, not CPU, AMD,
+other workloads, other GPUs, or unmodified upstream checkouts.
 
 ## Problems found and resolutions
 
@@ -66,3 +66,51 @@ already-tested image layers. The second run again reported checksum 952131
   not a byte-for-byte reproducible container build.
 - Automatic system-install mode is Ubuntu-specific and was not replayed against
   a newly reimaged machine; its package/runtime steps were performed on this node.
+
+## LULESH CUDA
+
+The uploaded Kokkos copy was incomplete: a clean build failed on missing
+`desul/atomics/Atomic_Ref.hpp`. A fresh pinned Kokkos 4.6.01 resolved compilation.
+No uploaded binaries or static libraries were used.
+
+The original LULESH source ran the 96-cubed/10-iteration case without extra
+capabilities and printed the expected energy and symmetry checks, but silently
+failed to collect CUDA counters. NVML assignment also failed, as it did in the
+historical PDF log. This was not a successful monitoring test.
+
+The repository now fetches pinned Mini-Apps and Kokkos revisions and applies a
+small local instrumentation patch. Native CUDA events are initialized before
+NVML and before Kokkos. Missing events and failed counter operations are errors,
+and GPU work is fenced at measurement boundaries.
+
+With explicitly approved `CAP_SYS_ADMIN` profiling, the patched source produced:
+
+| Result | Observed |
+| --- | --- |
+| Problem size | 96 cubed / 884,736 elements |
+| Iterations / MPI tasks | 10 / 1 |
+| Final origin energy | 3.833852e+08 |
+| MaxAbsDiff / TotalAbsDiff / MaxRelDiff | 0 / 0 / 0 |
+| FP instruction count | 9,832,246 |
+| DRAM bytes | 3,265,675,365 |
+| L1 bytes | 1,147,284,118 |
+| L2 bytes | 1,170,706,925 |
+| Sampled NVML utilization / temperature | 0 percent / 26 degrees C |
+
+A subsequent run through the new source-download/patch/launcher workflow also
+completed successfully. Utilization is a sampled reading, not an integrated
+activity metric; zero is not evidence that CUDA was unused. Performance values
+vary. The NVML names and default architecture currently target this Quadro RTX
+6000; CPU/AMD and other GPU names are not validated.
+
+A clean source-only export (approximately 316 KiB for the entire repository
+working source tree) fetched both dependencies again, rebuilt, and passed the
+same numerical and complete-metric checks through MINCER. Existing Docker image
+layers were reused. Repeating preparation is supported. A negative test without
+the profiling capability returned status 1 with an explicit CUDA-counter startup
+error instead of silently omitting metrics.
+
+After cleanup, a further full run passed with compiler output in a separate
+timestamped build log. The OpenMP macro now respects the command-line setting;
+the build no longer emits the `USE_OMP` redefinition warning. Main benchmark
+output was reduced to 55 lines without removing measurements or numerical checks.

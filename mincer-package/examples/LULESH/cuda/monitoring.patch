@@ -1,0 +1,204 @@
+--- a/lulesh.cc
++++ b/lulesh.cc
+@@ -10,6 +10,7 @@
+ #include <sys/time.h>
+ #include <iostream>
+ #include <unistd.h>
++#include <papi.h>
+ 
+ #include "lulesh.h"
+ 
+@@ -2063,6 +2064,14 @@
+ #endif
+ }
+ 
++static void CheckPapi(int result, const char *operation) {
++  if (result != PAPI_OK) {
++    fprintf(stderr, "ERROR: %s: %s (%d)\n", operation, PAPI_strerror(result), result);
++    fprintf(stderr, "Monitoring failed. Check supported events and administrator-approved GPU profiling permissions.\n");
++    exit(EXIT_FAILURE);
++  }
++}
++
+ int main(int argc, char *argv[]) {
+   Int_t numRanks;
+   Int_t myRank;
+@@ -2079,7 +2088,90 @@
+   myRank = 0;
+ #endif
+ 
++  
++  // Initialize PAPI for CUDA and NVML performance monitoring
++  int retval;
++  int EventSet = PAPI_NULL;        // For CUDA events
++  int NVMLEventSet = PAPI_NULL;    // For NVML events
++  long_long values[4];             // Array for CUDA events (FP, DRAM, L1, L2)
++  long_long nvml_values[2];        // Array for NVML events (power, temp)
++  int cuda_event_count = 0;
++  int nvml_event_count = 0;
++  
++  retval = PAPI_library_init(PAPI_VER_CURRENT);
++  if (retval != PAPI_VER_CURRENT) {
++    fprintf(stderr, "ERROR: PAPI library initialization: %d\n", retval);
++    return EXIT_FAILURE;
++  }
++  if (retval == PAPI_VER_CURRENT) {
++    printf("PAPI library initialized successfully\n");
++    
++    // Create separate event sets
++    CheckPapi(PAPI_create_eventset(&EventSet), "create CUDA event set");
++    CheckPapi(PAPI_create_eventset(&NVMLEventSet), "create NVML event set");
++    
++    // Find CUDA and NVML components
++    int num_components = PAPI_num_components();
++    int cuda_component = -1;
++    int nvml_component = -1;
++    
++    for (int i = 0; i < num_components; i++) {
++      const PAPI_component_info_t *comp_info = PAPI_get_component_info(i);
++      if (comp_info) {
++        if (strstr(comp_info->name, "cuda")) {
++          cuda_component = i;
++          printf("Found CUDA component at index %d\n", i);
++        }
++        if (strstr(comp_info->name, "nvml")) {
++          nvml_component = i;
++          printf("Found NVML component at index %d\n", i);
++        }
++      }
++    }
++    
++    // Initialize CUDA native events before NVML.
++    if (cuda_component >= 0) {
++      int code;
++      retval = PAPI_event_name_to_code("cuda:::sm__inst_executed_pipe_fp64", &code);
++      if (retval == PAPI_OK) {
++        printf("Initialized CUDA native events\n");
++        
++        // Add FP64 floating-point operations event
++        if (PAPI_add_named_event(EventSet, "cuda:::sm__inst_executed_pipe_fp64") == PAPI_OK) {
++          printf("Added FP64 instructions monitoring\n");
++          cuda_event_count++;
++        } else if (PAPI_add_named_event(EventSet, "cuda:::sm__sass_thread_inst_executed_op_fp32_pred_on") == PAPI_OK) {
++          printf("Added FP32 instructions monitoring\n");
++          cuda_event_count++;
++        }
++
++        // Add memory bandwidth event
++        CheckPapi(PAPI_add_named_event(EventSet, "cuda:::dram__bytes"), "add DRAM bytes event");
++        cuda_event_count++;
++        
++        // Add L1 cache statistics
++        CheckPapi(PAPI_add_named_event(EventSet, "cuda:::l1tex__t_bytes"), "add L1 bytes event");
++        cuda_event_count++;
++        
++        // Add L2 cache statistics
++        CheckPapi(PAPI_add_named_event(EventSet, "cuda:::lts__t_bytes"), "add L2 bytes event");
++        cuda_event_count++;
++        if (nvml_component >= 0) {
++          CheckPapi(PAPI_add_named_event(NVMLEventSet, "nvml:::Quadro_RTX_6000:device_0:gpu_utilization"), "add NVML utilization");
++          CheckPapi(PAPI_add_named_event(NVMLEventSet, "nvml:::Quadro_RTX_6000:device_0:temperature"), "add NVML temperature");
++          nvml_event_count = 2;
++        }
++      }
++    }
++  }
++  
++  if (cuda_event_count != 4 || nvml_event_count != 2) {
++    fprintf(stderr, "ERROR: Required CUDA/NVML events unavailable: CUDA=%d, NVML=%d.\n",
++            cuda_event_count, nvml_event_count);
++    return EXIT_FAILURE;
++  }
+   Kokkos::initialize();
++
+   {
+   opts.its = 9999999;
+   opts.nx = 30;
+@@ -2138,6 +2230,22 @@
+   timeval start;
+   gettimeofday(&start, NULL);
+ #endif
++
++  // Start PAPI monitoring right before computation
++  Kokkos::fence();
++  if (EventSet != PAPI_NULL && cuda_event_count > 0) {
++    CheckPapi(PAPI_start(EventSet), "start CUDA counters");
++    {
++      printf("Started CUDA performance monitoring\n");
++    }
++  }
++  
++  if (NVMLEventSet != PAPI_NULL && nvml_event_count > 0) {
++    CheckPapi(PAPI_start(NVMLEventSet), "start NVML monitoring");
++    {
++      printf("Started NVML monitoring\n");
++    }
++  }
+   while ((locDom.time() < locDom.stoptime()) && (locDom.cycle() < opts.its)) {
+ 
+     TimeIncrement(locDom);
+@@ -2149,6 +2257,33 @@
+     }
+   }
+ 
++  // Stop PAPI monitoring and display results
++  Kokkos::fence();
++  if (EventSet != PAPI_NULL && cuda_event_count > 0) {
++    CheckPapi(PAPI_stop(EventSet, values), "stop CUDA counters");
++    {
++      printf("\n=== CUDA Performance Results ===\n");
++      int idx = 0;
++      if (cuda_event_count > idx) printf("  FP instructions: %lld\n", values[idx++]);
++      if (cuda_event_count > idx) printf("  DRAM bytes: %lld\n", values[idx++]);
++      if (cuda_event_count > idx) printf("  L1 cache bytes: %lld\n", values[idx++]);
++      if (cuda_event_count > idx) printf("  L2 cache bytes: %lld\n", values[idx++]);
++      printf("=================================\n\n");
++    }
++  }
++
++  // Stop NVML monitoring and display results
++  if (NVMLEventSet != PAPI_NULL && nvml_event_count > 0) {
++    CheckPapi(PAPI_stop(NVMLEventSet, nvml_values), "stop NVML monitoring");
++    {
++      printf("\n=== NVML Performance Results ===\n");
++      int idx = 0;
++      if (nvml_event_count > idx) printf("  GPU utilization (%%): %lld\n", nvml_values[idx++]);
++      if (nvml_event_count > idx) printf("  Temperature (C): %lld\n", nvml_values[idx++]);
++      printf("=================================\n\n");
++    }
++  }
++
+   double elapsed_time;
+ #if USE_MPI
+   elapsed_time = MPI_Wtime() - start;
+@@ -2175,6 +2310,18 @@
+   }
+ 
+   buffer = Kokkos::View<Real_t*>();
++  
++  // Clean up PAPI
++  if (EventSet != PAPI_NULL) {
++    PAPI_cleanup_eventset(EventSet);
++    PAPI_destroy_eventset(&EventSet);
++  }
++  if (NVMLEventSet != PAPI_NULL) {
++    PAPI_cleanup_eventset(NVMLEventSet);
++    PAPI_destroy_eventset(&NVMLEventSet);
++  }
++  PAPI_shutdown();
++  
+   }
+   Kokkos::finalize();
+ #if USE_MPI
+--- a/lulesh.h
++++ b/lulesh.h
+@@ -5,7 +5,9 @@
+ 
+ // OpenMP will be compiled in if this flag is set to 1 AND the compiler beging
+ // used supports it (i.e. the _OPENMP symbol is defined)
++#ifndef USE_OMP
+ #define USE_OMP 1
++#endif
+ 
+ #if USE_MPI
+ #include <mpi.h>

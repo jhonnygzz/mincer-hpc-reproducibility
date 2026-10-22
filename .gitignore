@@ -1,5 +1,12 @@
 # Keep only the selected XSBench CUDA sources; exclude other local upstream trees.
 /mincer-package/examples/*
+!/mincer-package/examples/LULESH/
+/mincer-package/examples/LULESH/*
+!/mincer-package/examples/LULESH/cuda/
+/mincer-package/examples/LULESH/cuda/*
+!/mincer-package/examples/LULESH/cuda/Makefile
+!/mincer-package/examples/LULESH/cuda/run.sh
+!/mincer-package/examples/LULESH/cuda/monitoring.patch
 !/mincer-package/examples/XSBench/
 /mincer-package/examples/XSBench/*
 !/mincer-package/examples/XSBench/LICENSE

@@ -210,9 +210,12 @@ See the [XSBench guide](../benchmarks/xsbench.md) for administrator-approved
 profiling permissions and optional system installation. The upstream smoke test
 below is separate and does not include MINCER instrumentation.
 
-The same setup also prepares [LULESH CUDA](../benchmarks/lulesh.md), including
-fresh pinned Kokkos sources and the PAPI patch. Its launcher is under
-`mincer-package/examples/LULESH/cuda`.
+The same setup also prepares [LULESH CUDA](../benchmarks/lulesh.md) and
+[Gunrock CUDA](../benchmarks/gunrock.md), including pinned sources and PAPI
+patches. Their launchers are under `mincer-package/examples/LULESH/cuda`
+and `mincer-package/examples/Gunrock/cuda`. Both keep verbose compiler details
+in separate build logs while the main output focuses on measurements and
+correctness checks.
 
 Use this section as the project's NVIDIA validation profile. For another NVIDIA GPU, verify that its compute capability is supported by the selected CUDA toolkit and benchmark build flags. Select a compatible CUDA image/runtime rather than assuming CUDA 12.3.1 works on every host.
 

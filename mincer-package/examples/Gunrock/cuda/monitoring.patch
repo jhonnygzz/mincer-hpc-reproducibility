@@ -1,0 +1,185 @@
+diff --git a/cmake/FetchCCCL.cmake b/cmake/FetchCCCL.cmake
+index 04055fbaa..06cadc2cb 100644
+--- a/cmake/FetchCCCL.cmake
++++ b/cmake/FetchCCCL.cmake
+@@ -9,7 +9,7 @@ set(FETCHCONTENT_BASE_DIR ${FC_BASE})
+ FetchContent_Declare(
+     cccl
+     GIT_REPOSITORY https://github.com/NVIDIA/cccl.git
+-    GIT_TAG        main
++    GIT_TAG        55dc96f0ba37e7c992c7840a74708cbce22f0039
+ )
+ 
+ FetchContent_GetProperties(cccl)
+diff --git a/cmake/FetchCMakeModules.cmake b/cmake/FetchCMakeModules.cmake
+index 2e9991cd9..761d58038 100644
+--- a/cmake/FetchCMakeModules.cmake
++++ b/cmake/FetchCMakeModules.cmake
+@@ -9,7 +9,7 @@ set(FETCHCONTENT_BASE_DIR ${FC_BASE})
+ FetchContent_Declare(
+     cmake_modules
+     GIT_REPOSITORY https://github.com/rpavlik/cmake-modules.git
+-    GIT_TAG        main
++    GIT_TAG        76c1eb4fbb2e5988a3bc0fdc1ff4c326b737a10c
+ )
+ 
+ FetchContent_GetProperties(cmake_modules)
+diff --git a/cmake/FetchCXXOpts.cmake b/cmake/FetchCXXOpts.cmake
+index f90eac1e0..8ddc8936a 100644
+--- a/cmake/FetchCXXOpts.cmake
++++ b/cmake/FetchCXXOpts.cmake
+@@ -9,7 +9,7 @@ set(FETCHCONTENT_BASE_DIR ${FC_BASE})
+ FetchContent_Declare(
+   cxxopts
+     GIT_REPOSITORY https://github.com/jarro2783/cxxopts.git
+-    GIT_TAG        v3.0.0
++    GIT_TAG        c74846a891b3cc3bfa992d588b1295f528d43039
+ )
+ 
+ FetchContent_GetProperties(cxxopts)
+diff --git a/cmake/FetchModernGPU.cmake b/cmake/FetchModernGPU.cmake
+index c2aa28d4b..dbbd5de08 100644
+--- a/cmake/FetchModernGPU.cmake
++++ b/cmake/FetchModernGPU.cmake
+@@ -9,7 +9,7 @@ set(FETCHCONTENT_BASE_DIR ${FC_BASE})
+ FetchContent_Declare(
+     moderngpu
+     GIT_REPOSITORY https://github.com/moderngpu/moderngpu.git
+-    GIT_TAG        master
++    GIT_TAG        d8cf03d33917cb8ee792a59be54c4026913730e4
+ )
+ 
+ FetchContent_GetProperties(moderngpu)
+diff --git a/cmake/FetchNlohmannJson.cmake b/cmake/FetchNlohmannJson.cmake
+index 525ab18f9..b9861639f 100644
+--- a/cmake/FetchNlohmannJson.cmake
++++ b/cmake/FetchNlohmannJson.cmake
+@@ -9,7 +9,7 @@ set(FETCHCONTENT_BASE_DIR ${FC_BASE})
+ FetchContent_Declare(
+   json
+     GIT_REPOSITORY https://github.com/nlohmann/json.git
+-    GIT_TAG        develop
++    GIT_TAG        44bee1b1389f35114c840320cd7633668db6fcd9
+ )
+ 
+ FetchContent_GetProperties(json)
+diff --git a/examples/algorithms/bfs/CMakeLists.txt b/examples/algorithms/bfs/CMakeLists.txt
+index 7d81b8970..f571bece2 100644
+--- a/examples/algorithms/bfs/CMakeLists.txt
++++ b/examples/algorithms/bfs/CMakeLists.txt
+@@ -11,6 +11,8 @@ set(SOURCE_LIST
+ 
+ target_sources(${APPLICATION_NAME} PRIVATE ${SOURCE_LIST})
+ target_link_libraries(${APPLICATION_NAME} PRIVATE essentials)
++target_include_directories(${APPLICATION_NAME} PRIVATE /usr/local/papi/include)
++target_link_libraries(${APPLICATION_NAME} PRIVATE /usr/local/papi/lib/libpapi.so)
+ get_target_property(ESSENTIALS_ARCHITECTURES essentials CUDA_ARCHITECTURES)
+ set_target_properties(${APPLICATION_NAME} 
+     PROPERTIES 
+diff --git a/examples/algorithms/bfs/bfs.cu b/examples/algorithms/bfs/bfs.cu
+index 98fc34a9a..01aa1c375 100644
+--- a/examples/algorithms/bfs/bfs.cu
++++ b/examples/algorithms/bfs/bfs.cu
+@@ -3,13 +3,46 @@
+ #include <gunrock/util/performance.hxx>
+ #include <gunrock/io/parameters.hxx>
+ #include <gunrock/framework/benchmark.hxx>
++#include <papi.h>
++#include <stdexcept>
+ 
+ #include "bfs_cpu.hxx"  // Reference implementation
+ 
+ using namespace gunrock;
+ using namespace memory;
+ 
++static void check_papi(int result, const char* operation) {
++  if (result != PAPI_OK)
++    throw std::runtime_error(std::string(operation) + ": " +
++                             PAPI_strerror(result) + " (" +
++                             std::to_string(result) + ")");
++}
++
++static void synchronize_gpu() {
++  cudaError_t result = cudaDeviceSynchronize();
++  if (result != cudaSuccess)
++    throw std::runtime_error(std::string("CUDA synchronization: ") +
++                             cudaGetErrorString(result));
++}
++
+ void test_bfs(int num_arguments, char** argument_array) {
++  int version = PAPI_library_init(PAPI_VER_CURRENT);
++  if (version != PAPI_VER_CURRENT)
++    throw std::runtime_error("PAPI initialization failed: " + std::to_string(version));
++  int cuda_events = PAPI_NULL;
++  int nvml_events = PAPI_NULL;
++  check_papi(PAPI_create_eventset(&cuda_events), "create CUDA event set");
++  check_papi(PAPI_create_eventset(&nvml_events), "create NVML event set");
++  const char* events[] = {
++      "cuda:::sm__inst_executed_pipe_fp64", "cuda:::dram__bytes",
++      "cuda:::l1tex__t_bytes", "cuda:::lts__t_bytes"};
++  for (const char* event : events)
++    check_papi(PAPI_add_named_event(cuda_events, event), event);
++  check_papi(PAPI_add_named_event(nvml_events,
++      "nvml:::Quadro_RTX_6000:device_0:gpu_utilization"), "add NVML utilization");
++  check_papi(PAPI_add_named_event(nvml_events,
++      "nvml:::Quadro_RTX_6000:device_0:temperature"), "add NVML temperature");
++
+   // --
+   // Define types
+ 
+@@ -69,6 +102,9 @@ void test_bfs(int num_arguments, char** argument_array) {
+   auto benchmark_metrics = std::vector<benchmark::host_benchmark_t>(n_runs);
+   for (int i = 0; i < n_runs; i++) {
+     benchmark::INIT_BENCH();
++    synchronize_gpu();
++    check_papi(PAPI_start(cuda_events), "start CUDA counters");
++    check_papi(PAPI_start(nvml_events), "start NVML monitoring");
+     if (DEFAULT_BFS_ALGORITHMS == "DAWN")
+       run_times.push_back(gunrock::dawn_bfs::run(G, source_vect[i],
+                                                  distances.data().get(),
+@@ -78,6 +114,20 @@ void test_bfs(int num_arguments, char** argument_array) {
+                                             distances.data().get(),
+                                             predecessors.data().get()));
+ 
++    synchronize_gpu();
++    long long values[4] = {};
++    long long nvml_values[2] = {};
++    check_papi(PAPI_stop(cuda_events, values), "stop CUDA counters");
++    check_papi(PAPI_stop(nvml_events, nvml_values), "stop NVML monitoring");
++    std::cout << "\n=== CUDA Performance Results (Run " << i + 1 << ") ===\n"
++              << "  FP64 instructions: " << values[0] << "\n"
++              << "  DRAM bytes: " << values[1] << "\n"
++              << "  L1 cache bytes: " << values[2] << "\n"
++              << "  L2 cache bytes: " << values[3] << "\n"
++              << "=== NVML Monitoring ===\n"
++              << "  GPU utilization (%): " << nvml_values[0] << "\n"
++              << "  Temperature (C): " << nvml_values[1] << std::endl;
++
+     benchmark::host_benchmark_t metrics = benchmark::EXTRACT();
+     benchmark_metrics[i] = metrics;
+ 
+@@ -121,9 +171,23 @@ void test_bfs(int num_arguments, char** argument_array) {
+ 
+     std::cout << "CPU Elapsed Time : " << cpu_elapsed << " (ms)" << std::endl;
+     std::cout << "Number of errors : " << n_errors << std::endl;
++    if (n_errors != 0)
++      throw std::runtime_error("GPU/CPU BFS distance validation failed");
+   }
++  check_papi(PAPI_cleanup_eventset(cuda_events), "clean CUDA event set");
++  check_papi(PAPI_destroy_eventset(&cuda_events), "destroy CUDA event set");
++  check_papi(PAPI_cleanup_eventset(nvml_events), "clean NVML event set");
++  check_papi(PAPI_destroy_eventset(&nvml_events), "destroy NVML event set");
++  PAPI_shutdown();
+ }
+ 
+ int main(int argc, char** argv) {
+-  test_bfs(argc, argv);
++  try {
++    test_bfs(argc, argv);
++    return 0;
++  } catch (const std::exception& error) {
++    std::cerr << "ERROR: " << error.what()
++              << "\nCheck event support and administrator-approved GPU profiling permissions.\n";
++    return 1;
++  }
+ }

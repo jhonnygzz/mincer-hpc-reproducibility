@@ -9,7 +9,7 @@ MINCER is a research toolkit for documenting HPC computing environments and capt
 - Human-readable guides for acquiring and running the benchmark workloads.
 - A [node quick start](docs/nodes/quickstart.md) with Cascade Lake CPU, MI100, and RTX 6000 hardware profiles. These are validation targets; MINCER users should adapt the steps to their own nodes.
 
-The small PAPI-instrumented XSBench CUDA example is included with its upstream license. LULESH CUDA uses pinned upstream downloads plus a small instrumentation patch. Other benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are excluded. Follow [the benchmark guides](docs/benchmarks/README.md) for those workloads.
+The small PAPI-instrumented XSBench CUDA example is included with its upstream license. LULESH and Gunrock CUDA use pinned upstream downloads plus small instrumentation patches. Other benchmark source trees, datasets, model weights, generated binaries, container images, and experiment logs are excluded. Follow [the benchmark guides](docs/benchmarks/README.md) for those workloads.
 
 ## Start with XSBench on NVIDIA
 
@@ -27,8 +27,9 @@ It uses sudo, adds NVIDIA's package repository when needed, and restarts Docker;
 it refuses that restart when Docker has running containers. It does not install
 GPU drivers, change Docker group membership, or change host profiling policy.
 
-Setup also downloads pinned LULESH and Kokkos sources into an ignored build
-directory. For that example, see the [LULESH CUDA guide](docs/benchmarks/lulesh.md).
+Setup also prepares pinned LULESH/Kokkos and Gunrock sources in ignored build
+directories. See the [LULESH CUDA guide](docs/benchmarks/lulesh.md) and
+[Gunrock CUDA guide](docs/benchmarks/gunrock.md) for their run commands.
 
 If the host restricts GPU profiling, the default experiment fails explicitly.
 Only with administrator approval, use the opt-in capability described in the
@@ -37,7 +38,7 @@ Only with administrator approval, use the opt-in capability described in the
 
 ## Current status
 
-The XSBench and LULESH CUDA workflows have been tested on a Quadro RTX 6000; see the validation record above. Other workload guides remain preparation drafts. CPU and AMD setup scripts are not yet provided.
+The XSBench, LULESH, and Gunrock CUDA workflows have been tested on a Quadro RTX 6000; see the validation record above. Other workload guides remain preparation drafts. CPU and AMD setup scripts are not yet provided.
 
 Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
 
@@ -97,7 +98,7 @@ For fresh Chameleon allocations, start with the [node-specific quick start](docs
 
 ## Testing and provenance
 
-[`TESTING_REPORT.md`](TESTING_REPORT.md) records historical results from a previously provisioned Linux/AMD MI100 environment. Those results do not validate this cleaned, source-free distribution or the draft guides. Re-run the benchmarks on the provisioned Chameleon nodes and add current system details and logs only after verifying that they contain no sensitive information or large artifacts.
+[`TESTING_REPORT.md`](TESTING_REPORT.md) records historical results from a previously provisioned Linux/AMD MI100 environment. Current NVIDIA results are recorded separately in the [NVIDIA validation record](docs/nodes/nvidia-validation.md). Re-run benchmarks on each target node; historical output does not establish support for another hardware/software configuration. Share logs only after checking for sensitive information and large artifacts.
 
 ## Attribution
 

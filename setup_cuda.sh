@@ -52,5 +52,7 @@ python3 -m venv "$VENV"
     bash -euc 'nvidia-smi; papi_component_avail; papi_avail'
 echo "Image and GPU checks completed. Counter collection still requires the benchmark test."
 bash "$ROOT/prepare_lulesh_cuda.sh"
+bash "$ROOT/prepare_gunrock_cuda.sh"
 echo "Run: \"$VENV/bin/python\" \"$ROOT/mincer-package/run_experiment.py\" --path \"$ROOT/mincer-package/examples/XSBench/cuda\""
 echo "LULESH: \"$VENV/bin/python\" \"$ROOT/mincer-package/run_experiment.py\" --path \"$ROOT/mincer-package/examples/LULESH/cuda\""
+echo "Gunrock: \"$VENV/bin/python\" \"$ROOT/mincer-package/run_experiment.py\" --path \"$ROOT/mincer-package/examples/Gunrock/cuda\""

@@ -1,5 +1,11 @@
-# Keep only the selected XSBench CUDA sources; exclude other local upstream trees.
+# Keep selected CUDA example sources/scripts; exclude downloaded upstream trees.
 /mincer-package/examples/*
+!/mincer-package/examples/Gunrock/
+/mincer-package/examples/Gunrock/*
+!/mincer-package/examples/Gunrock/cuda/
+/mincer-package/examples/Gunrock/cuda/*
+!/mincer-package/examples/Gunrock/cuda/run.sh
+!/mincer-package/examples/Gunrock/cuda/monitoring.patch
 !/mincer-package/examples/LULESH/
 /mincer-package/examples/LULESH/*
 !/mincer-package/examples/LULESH/cuda/

@@ -1,50 +1,118 @@
-# Gunrock BFS
+# Gunrock BFS on NVIDIA CUDA
 
-Gunrock is a GPU graph-processing framework. This guide covers CUDA BFS and HIP/ROCm BFS runs instrumented with PAPI.
+This example reproduces the PDF's CUDA Gunrock BFS workload with the Chesapeake
+graph and PAPI counters. It uses Gunrock's `bfs` target, whose selected algorithm
+at this revision is DAWN. The AMD HIP variant is future work, not validated here.
 
-## Acquire the sources
+## Prepare and run
 
-For the CUDA implementation:
-
-```bash
-mkdir -p "$HOME/mincer-workloads"
-git clone https://github.com/gunrock/gunrock.git \
-  "$HOME/mincer-workloads/gunrock-cuda"
-```
-
-For the AMD HIP port:
+From the repository root on a compatible NVIDIA node:
 
 ```bash
-git clone --branch hip-develop https://github.com/AMD-HPC/gunrock.git \
-  "$HOME/mincer-workloads/gunrock-hip"
+bash setup_cuda.sh
+"$HOME/.venvs/mincer/bin/python" mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/Gunrock/cuda"
 ```
 
-The example uses the small Chesapeake Matrix Market graph at `datasets/chesapeake/chesapeake.mtx`, which may be distributed with the Gunrock source tree. Check that path exists in the checked-out revision; otherwise follow that revision's dataset documentation.
-
-## Build and run upstream
-
-Gunrock requires the matching accelerator compiler and CMake. The upstream CUDA quick start builds an algorithm and runs it with the Chesapeake graph:
+If the CUDA/PAPI image and Python environment are already prepared, source
+preparation alone is:
 
 ```bash
-cd "$HOME/mincer-workloads/gunrock-cuda"
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target bfs -j"$(nproc)"
-./build/bin/bfs --market datasets/chesapeake/chesapeake.mtx
+bash prepare_gunrock_cuda.sh
 ```
 
-For the HIP port, follow the checked-out branch's HIP-specific setup and build instructions. The upstream instructions include building the `bfs` target and passing the same graph file.
-
-## Run through MINCER
-
-The PAPI-enabled workflow uses a custom `bfs_papi` executable for AMD and PAPI changes for CUDA. Those modifications are not in this source-free repository and are not guaranteed to be present in the upstream clone. Once the appropriate PAPI-enabled source and a compatible `run.sh` are available, run the selected workload directory through MINCER:
+With explicit administrator approval on a host that restricts GPU counters:
 
 ```bash
-python3 mincer-package/run_experiment.py \
-  --path "$HOME/mincer-workloads/gunrock-cuda"
+MINCER_ALLOW_GPU_PROFILING=1 "$HOME/.venvs/mincer/bin/python" \
+  mincer-package/run_experiment.py \
+  --path "$PWD/mincer-package/examples/Gunrock/cuda"
 ```
 
-Use `gunrock-hip` for AMD. The launcher must build/run the instrumented variant and use the image prepared for that node. Update the historical launcher's absolute mount paths and image tags rather than using its original `/home/cc/` paths unchanged.
+This is the same opt-in `CAP_SYS_ADMIN` mechanism documented for
+[XSBench](xsbench.md). It is a powerful capability and must not be used without
+approval. The measurement container has a read-only filesystem and workload
+mount. Compilation runs separately as the invoking user, without GPU access or
+additional capabilities. Neither setup nor the launcher disables host profiling
+restrictions or replaces drivers.
 
-## Verify and status
+See the [node quick start](../nodes/quickstart.md) for host prerequisites and the
+explicit Ubuntu system-install option. Git, `patch`, and `tar` are also required.
 
-Record BFS distances, elapsed time, and CUDA or ROCm event values. An earlier CUDA run showed an NVML component initialization failure while CUDA event collection continued; verify component initialization on the provisioned node and record which counters actually succeeded. Compare GPU and CPU distances for the AMD run. Timings and event totals are hardware-specific. This guide is untested on a fresh Chameleon allocation.
+## Lightweight, repeatable source preparation
+
+The preparation script fetches Gunrock revision
+`530f25443864d04c25286c053d6812a888b4d779` and applies the small local
+instrumentation patch. That patch also pins five CMake dependencies (CCCL,
+ModernGPU, cxxopts, nlohmann/json, and CMake Modules) to the revisions found in the
+historical uploaded example, rather than following moving branches.
+
+The unmodified upstream checkout and generated working source stay under ignored
+`build/` directories. Re-running preparation refreshes generated work files;
+edit the repository's patch, not `build/work`, to retain instrumentation changes.
+Modified or unexpected upstream checkouts are rejected instead of overwritten.
+All upstream license notices remain in the downloaded source.
+
+The Chesapeake Matrix Market graph is already in the pinned source tree; no
+separate dataset download is needed. Its header describes a symmetric 39-by-39
+graph with 170 stored entries. The launcher builds only the BFS target, not
+every Gunrock example or unit test. Initial CMake configuration requires network
+access to fetch dependencies.
+
+The default image is `mincer-papi-cuda:latest`, with CUDA 12.3.1, PAPI 7.2.0, and
+CMake 3.27.7. `MINCER_CUDA_IMAGE` overrides the image name. The CUDA architecture
+is 75 and NVML event names target `Quadro_RTX_6000:device_0`; other GPUs require
+matching architecture and supported event names.
+
+## Expected results and differences from the PDF
+
+The benchmark uses the PDF's graph and fixes source vertex **17**, as shown in
+the PDF screenshot, rather than choosing a random source. It additionally
+passes `--validate` so every GPU distance is compared against the CPU reference:
+
+```text
+=== CUDA Performance Results (Run 1) ===
+  FP64 instructions: 0
+  DRAM bytes: ...
+  L1 cache bytes: ...
+  L2 cache bytes: ...
+=== NVML Monitoring ===
+  GPU utilization (%): ...
+  Temperature (C): ...
+Source : 17
+GPU distances[:39] = ...
+CPU Distances[:39] = ...
+Number of errors : 0
+=== Gunrock CUDA BFS Test Complete ===
+```
+
+The important correctness result is `Number of errors : 0`. Distance mismatches
+return a nonzero exit status. The FP64 instruction count may legitimately be zero
+for this graph-traversal workload; it is not a FLOP total. CUDA byte totals and
+timings vary and are not portable thresholds. NVML utilization is a sampled
+reading, not an average over this very short traversal, so zero is possible.
+
+The historical PDF log showed NVML component assignment failing. The new patch
+initializes native CUDA/NVML events before graph allocation and requires all six
+metrics, with checked setup/start/stop calls and synchronization boundaries.
+Missing measurements cause a visible failure instead of an apparent success.
+
+## Logs and failures
+
+The main captured output stays focused on measurements, distances, and validation:
+
+```text
+mincer-package/examples/Gunrock/cuda/experiment_logs/run_<timestamp>/
+  output.txt
+  execution_log_<timestamp>.txt
+```
+
+Compiler and CMake details are saved separately in `build/build_<timestamp>.log`;
+the main output prints its path. A failed build prints its last 30 diagnostic
+lines and exits nonzero. Nothing is silently suppressed, but successful compiler
+commands and container startup banners do not obscure results.
+
+No textual reference is supplied because timings and monitoring values vary.
+MINCER's skipped reference comparison is separate from the GPU/CPU distance
+validation. See the [NVIDIA validation record](../nodes/nvidia-validation.md)
+for actual tests and limitations.

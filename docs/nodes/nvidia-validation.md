@@ -7,7 +7,7 @@ Intel Xeon Gold 6126, approximately 187.4 GiB RAM, and one Quadro RTX 6000
 with 24 GiB VRAM and NVIDIA driver 560.35.05. The host CUDA compiler is 12.6;
 the experiment builds and runs inside CUDA 12.3.1 / Ubuntu 22.04 with PAPI 7.2.0.
 
-The following sections validate NVIDIA XSBench and LULESH only, not CPU, AMD,
+The following sections validate NVIDIA XSBench, LULESH, and Gunrock only, not CPU, AMD,
 other workloads, other GPUs, or unmodified upstream checkouts.
 
 ## Problems found and resolutions
@@ -114,3 +114,49 @@ After cleanup, a further full run passed with compiler output in a separate
 timestamped build log. The OpenMP macro now respects the command-line setting;
 the build no longer emits the `USE_OMP` redefinition warning. Main benchmark
 output was reduced to 55 lines without removing measurements or numerical checks.
+
+## Gunrock CUDA BFS
+
+The uploaded source revision is
+`530f25443864d04c25286c053d6812a888b4d779`. The uploaded dependency Git databases
+reported damaged pack/index files, so no existing dependency checkouts or
+binaries were trusted. Fresh upstream source and five pinned CMake dependencies
+built successfully in the existing CUDA/PAPI image.
+
+The example follows the PDF's Chesapeake graph and source vertex 17. It builds
+only the BFS target (DAWN algorithm at this revision) and adds `--validate`.
+The old PDF log showed an NVML assignment failure and unchecked CUDA start calls.
+The patch now checks all six metrics, synchronizes GPU work, and returns nonzero
+on PAPI failures or distance mismatches.
+
+With explicitly approved profiling capability, a complete new launcher run gave:
+
+| Result | Observed |
+| --- | --- |
+| Source vertex / graph vertices | 17 / 39 |
+| GPU/CPU distance mismatches | 0 |
+| FP64 instructions | 0 |
+| DRAM bytes | 6,325 |
+| L1 bytes | 172 |
+| L2 bytes | 71,130 |
+| Sampled NVML utilization / temperature | 0 percent / 26 degrees C |
+| Reported GPU elapsed time | 0.246368 milliseconds |
+
+Zero FP64 instructions is expected for this BFS workload; zero sampled GPU
+utilization is possible for such a short run. Neither value indicates failed
+monitoring when PAPI start/stop calls succeed. Bytes/times are observations, not
+thresholds. Main output is 22 lines; full CMake/compiler diagnostics are retained
+in a separate timestamped build log.
+
+A negative test without extra capability returned status 1 with an explicit
+CUDA-counter startup error, not false success. Repeating source preparation
+succeeded. Eight Python regression tests cover runner reporting and both quiet
+launchers, including build/runtime failures and opt-in capability handling.
+Other GPUs, AMD HIP, and CPU backends remain unvalidated.
+
+A final source-only export (approximately 360 KiB for the whole repository
+working tree, excluding Git history) ran `setup_cuda.sh`, downloaded fresh
+Gunrock/dependency sources, rebuilt BFS, and again reported zero CPU/GPU
+distance mismatches with all six measurements present. Only the existing tested
+Docker image layers and Python environment were reused. This is not a test of
+automatic system installation on a newly reimaged node.

@@ -2,7 +2,7 @@
 
 ## Environment and scope
 
-Validated October 22, 2026 on a Chameleon bare-metal node running Ubuntu
+Validated on a Chameleon bare-metal node running Ubuntu
 24.04.4 / Linux 6.8.0-124-generic, with two Intel Xeon Gold 6240R sockets,
 96 logical CPUs, and approximately 187 GiB RAM. Builds and measurements used
 the repository's Ubuntu 22.04 / PAPI 7.2.0 CPU image. XSBench and LULESH used
@@ -89,15 +89,14 @@ LULESH reports L1 miss counts, not a cache-access miss percentage.
 - XSBench could collect socket-0 package/DRAM energy at policy `4` in the tested
   configuration; that partial success did not make its overall run successful.
 - Source-only exports built without old benchmark objects or binaries.
-  Matrix passed its clean-source workflow. XSBench's pre-commit export built
+  Matrix passed its clean-source workflow. XSBench's source-only export built
   and passed the small-case checksum `941535 (Valid)` while correctly failing
   inaccessible CPU counters; its full measured run was not repeated in that
   export. LULESH fetched both pinned dependencies again, repeated setup,
   and passed the full numerical/six-counter MINCER run.
 - The final package regression suite passed **27 tests**, including numerical
   rejection cases, launcher capability opt-ins, visible build/runtime failures,
-  and checked PAPI error propagation. Earlier XSBench checkpoint testing had
-  19 tests before LULESH's eight tests were added.
+  and checked PAPI error propagation.
 - These checks reused host Docker, cached CPU image layers, and the shared
   Python environment. Compiled regression tests also used the host compiler.
   They were not clean-OS or fully uncached-image tests.

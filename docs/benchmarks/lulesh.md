@@ -28,9 +28,8 @@ download these AMD dependencies.
 The launcher always rebuilds from source, using Kokkos 4.6.01 with HIP/OpenMP
 and architecture `AMD_GFX908` (MI100), then runs `-s 96 -i 10`. Build failures
 stop execution rather than running an old binary. Sources are prepared from
-the same pinned Mini-Apps and Kokkos revisions as the NVIDIA example below;
-the original handoff sources are not build dependencies. Full checkouts and
-their upstream notices remain in the ignored `build/` directory. Only generated
+the same pinned Mini-Apps and Kokkos revisions as the NVIDIA example below.
+Full checkouts and their upstream notices remain in the ignored `build/` directory. Only generated
 `build/work` is refreshed. Edit the tracked patch/helpers and rerun setup or
 `bash prepare_lulesh_hip.sh`, not generated source files.
 
@@ -137,18 +136,16 @@ The default CPU image is `mincer-papi-cpu:latest`.
 
 `setup_cpu.sh` calls `prepare_lulesh_cpu.sh`, fetching the same fixed Mini-Apps
 and Kokkos 4.6.01 revisions listed in the NVIDIA section below into the CPU
-example's ignored `build/` directory. The handoff's application files match
-that Mini-Apps revision apart from its PAPI hooks. A small local patch restores
-those hooks with checked error propagation, fences measurement boundaries,
-and adds numerical validation. The included `papi_metrics.cpp` and
-`papi_metrics.h` replace the handoff helper's unchecked operations while
-retaining its main-thread measurement scope.
+example's ignored `build/` directory. A local patch adds PAPI instrumentation,
+checked error propagation, measurement fences, and numerical validation.
+The included `papi_metrics.cpp` and `papi_metrics.h` collect main-thread
+measurements.
 
 The full pinned checkouts, including upstream notices, remain intact. Only
 generated `build/work` sources are refreshed. Modify the tracked patch/helper
 files, not generated sources, and rerun setup or `bash prepare_lulesh_cpu.sh`
 after changing them. Unexpected revisions or dirty dependency checkouts are
-rejected rather than overwritten. No handoff files or old binaries are needed.
+rejected rather than overwritten.
 The CPU build uses generic OpenMP rather than a fixed Cascade Lake architecture.
 
 ### CPU permissions and measurement scope
@@ -177,11 +174,8 @@ These are main-thread counts around the Kokkos/OpenMP time-stepping loop,
 not sums across workers. IPC is that thread's instructions divided by cycles.
 No multiplexing or substitute events were needed on this node.
 
-The handoff additionally tries L1 store misses and energy names that do not
-appear as successful events in the PDF output. They are not claimed here.
-The PDF's zero "Total Energy" is not a successful energy measurement. Its
-"L1 Cache Miss Rate" divides misses by cycles, not cache accesses, so this
-workflow does not repeat that misleading percentage or claim energy collection.
+This workflow reports L1 miss counts, not a cache-access miss percentage,
+and does not measure energy.
 
 ### CPU numerical validation
 
@@ -201,7 +195,7 @@ then still fails. MINCER's separate textual reference comparison can say
 
 ### CPU validation on the supplied node
 
-Validated October 22, 2026 on Ubuntu 24.04.4 / Linux 6.8.0-124-generic,
+Validated on Ubuntu 24.04.4 / Linux 6.8.0-124-generic,
 dual-socket Xeon Gold 6240R, 96 logical CPUs, approximately 187 GiB RAM,
 using the Ubuntu 22.04 / PAPI 7.2.0 CPU image and 96 OpenMP threads:
 
@@ -257,8 +251,8 @@ bash prepare_lulesh_cuda.sh
 ```
 
 This downloads fixed revisions of
-[Kokkos Mini-Apps](https://github.com/kokkos/kokkos-miniapps/tree/870fea7443a915336d9a545b0267dd6eb5bed396)
-and [Kokkos 4.6.01](https://github.com/kokkos/kokkos/tree/1b1383c6001f3bfe9fe309ca923c2d786600cc79),
+[Kokkos Mini-Apps](https://github.com/kokkos/kokkos-miniapps)
+and [Kokkos 4.6.01](https://github.com/kokkos/kokkos/releases/tag/4.6.01),
 then applies the local PAPI patch in a generated work directory. Upstream files,
 dependency Git histories, binaries, and logs stay ignored. The generated
 `build/work` sources are refreshed by preparation; do not edit them as your
@@ -323,19 +317,12 @@ checks, as in the PDF.
 A skipped reference comparison is expected; it is not proof of correctness.
 PAPI event setup/start/stop failures now stop the example with a nonzero status.
 
-## Validation and the old Kokkos problem
+## Validation
 
-On October 22, 2026, the uploaded Kokkos copy failed a clean build because
-`desul/atomics/Atomic_Ref.hpp` was missing. Fetching pinned Kokkos 4.6.01 fixed
-this; users do not need to manually replace folders.
-
-The old LULESH code could exit successfully without collecting CUDA counters.
-Its historical log also contains an NVML component initialization failure.
-The patch now initializes native events before Kokkos, requires the complete
+The instrumentation initializes native events before Kokkos, requires the complete
 metric set, checks start/stop calls, and fences GPU work around measurement.
 This enabled CUDA and NVML readings on this RTX 6000. It does not establish that
 all other PAPI/Kokkos/GPU combinations are supported.
 
 See the [NVIDIA validation record](../nodes/nvidia-validation.md) for measured
-values and environment details. HIP uses the separate workflow above; the
-uploaded machine-specific launchers are not portable instructions.
+values and environment details. HIP uses the separate workflow above.

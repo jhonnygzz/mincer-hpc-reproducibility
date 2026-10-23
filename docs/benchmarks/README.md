@@ -44,12 +44,11 @@ launchers build and run the workload. The runner's optional reference comparison
 is textual, not a numerical-tolerance check. The included CPU examples perform
 their own numerical checks even without a reference file.
 
-## Known portability blockers in the local historical scripts
+## Setup and portability
 
 - `setup_cuda.sh` prepares the NVIDIA XSBench, LULESH, and Gunrock workflows.
   `setup_cpu.sh` prepares the shared CPU environment and pinned LULESH sources.
   `setup_amd.sh` prepares the AMD XSBench or LULESH HIP workflow.
-- Several old `run.sh` files mount fixed paths under `/home/cc/` and expect image names that differ between examples. Replace these paths/tags for the actual checkout and node.
 - Some documented runs use PAPI-instrumented variants. Downloading an upstream project alone may not reproduce those modifications or expose the same PAPI events.
 
 Resolve and test these points on the Chameleon allocation before publishing measured results as reproducible.

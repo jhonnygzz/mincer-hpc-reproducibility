@@ -9,8 +9,8 @@ HIP examples.
 The repository includes a small source-only XSBench v20 CUDA example with MINCER's
 PAPI instrumentation. Upstream copyright and the MIT license are preserved in
 [`LICENSE`](../../mincer-package/examples/XSBench/LICENSE). Builds, binaries, and
-logs stay ignored. The CPU/OpenMP implementation from the verified handoff
-bundle is included as source with PAPI instrumentation.
+logs stay ignored. The CPU/OpenMP implementation is also included as source
+with PAPI instrumentation.
 
 From the repository root:
 
@@ -114,8 +114,8 @@ MINCER_USE_SUDO_DOCKER=1 "$HOME/.venvs/mincer/bin/python" \
 The launcher builds for `gfx908` by default; use `MINCER_AMD_ARCH` only when
 the node's compatible architecture is different. It targets device index `0`
 by default, configurable with `MINCER_AMD_DEVICE`. It runs the PDF's default
-large event-based case (17,000,000 lookups), not the historical launcher's
-small case. Require `Verification checksum: 952131 (Valid)` and one measured
+large event-based case (17,000,000 lookups).
+Require `Verification checksum: 952131 (Valid)` and one measured
 raw count for each of these exact event names:
 `SQ_INSTS_SALU`, `SQ_INSTS_VALU`, `TCC_HIT`, `TCC_MISS`,
 `TCC_EA_RDREQ_32B`, `TCC_EA_WRREQ_64B`, `SQ_INSTS_VMEM_RD`, and
@@ -134,7 +134,7 @@ for the tested node, observed results, measurement scope, and source-only test.
 
 The source-only CPU implementation is under
 [`openmp-threading`](../../mincer-package/examples/XSBench/openmp-threading/).
-It keeps the handoff's XSBench v20 source and MIT license, adds checked PAPI
+It uses XSBench v20 source with its MIT license, adds checked PAPI
 measurement of the PDF's package/DRAM energy and total cycles/instructions, and
 runs through MINCER. No separate dataset download is needed.
 
@@ -211,7 +211,7 @@ and container configurations may differ.
 
 ### CPU validation on the supplied node
 
-Validated on October 22, 2026 on Ubuntu 24.04.4 / Linux 6.8.0-124-generic,
+Validated on Ubuntu 24.04.4 / Linux 6.8.0-124-generic,
 dual-socket Intel Xeon Gold 6240R, with Ubuntu 22.04 / PAPI 7.2.0 container
 image and 96 OpenMP threads. The correctness checksum was valid and all exact
 PDF-required measurements were collected:
@@ -287,8 +287,7 @@ make
 ./XSBench -m event
 ```
 
-For AMD, use the included, instrumented workflow above rather than the
-historical external HIP launcher. The AMD PDF's large event-based run is the
+For AMD, use the included, instrumented workflow above. The large event-based run is the
 validated case; an independent upstream clone does not contain MINCER's PAPI
 instrumentation.
 
@@ -296,14 +295,14 @@ Exact command-line options and compiler settings are documented in the upstream 
 
 ### Run external variants through MINCER
 
-The historical PAPI example directories used custom `run.sh` scripts. Once the PAPI-enabled variant and a launcher compatible with the node are available in the workload directory, invoke it from the MINCER repository root:
+Once a PAPI-enabled variant and a launcher compatible with the node are available in the workload directory, invoke it from the MINCER repository root:
 
 ```bash
 python3 mincer-package/run_experiment.py \
   --path "$HOME/mincer-workloads/XSBench/openmp-threading"
 ```
 
-Use the `cuda` or `hip` directory for the corresponding accelerator. The experiment runner requires `run.sh`; cloning upstream XSBench does not by itself provide MINCER's PAPI instrumentation or a guaranteed compatible launcher. The historical scripts also expect specific Docker image tags and should be checked/updated before use.
+Use the `cuda` or `hip` directory for the corresponding accelerator. The experiment runner requires `run.sh`; cloning upstream XSBench does not by itself provide MINCER's PAPI instrumentation or a compatible launcher.
 
 ### Data, checks, and status
 

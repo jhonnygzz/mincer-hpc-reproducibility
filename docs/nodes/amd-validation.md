@@ -2,7 +2,7 @@
 
 ## XSBench HIP environment and scope
 
-Validated October 22, 2026 on Ubuntu 24.04.4 / Linux 6.8.0-124-generic,
+Validated on Ubuntu 24.04.4 / Linux 6.8.0-124-generic,
 dual-socket AMD EPYC 7763 host with two AMD Instinct MI100 accelerators
 (`gfx908`). Both GPUs use the host `amdgpu` kernel driver. The container used
 the pinned AMD `rocm/dev-ubuntu-22.04:6.4.3` image and PAPI 7.2.0 with only the
@@ -11,20 +11,13 @@ administrator-approved and the shared `$HOME/.venvs/mincer` environment used
 Python 3.12.3 with `psutil` 7.2.2.
 
 This record covers the AMD GPU examples documented here: XSBench HIP and
-LULESH Kokkos HIP. The handoff bundle passed its
-supplied SHA256 checksums before use. The repository checkout was clean at the latest
-published `main` commit before changes. A terminal Git pull could not
-authenticate; the available checkout already matched `origin/main` at
-`eedaf8774aea9e215db89ab2dbe6a9fe77577f14`.
+LULESH Kokkos HIP.
 
 ## Provisioning and permissions
 
-With explicit user approval, Ubuntu's `docker.io` package and dependencies
-(`containerd`, `runc`) were installed. Docker/containerd were started by package
-installation. No AMD host driver was installed or replaced, no host security
-policy or Docker configuration was changed, and no shared Docker service was
-restarted. The official ROCm 6.4.3 development image recognized both MI100s
-and `gfx908`.
+The host requires Docker and read/write GPU device access configured by the
+administrator. The ROCm 6.4.3 development image recognized both MI100s and
+`gfx908`. Setup does not install or replace host drivers or change host policies.
 
 The account received a per-user ACL for read/write access to `/dev/kfd` and
 both render nodes. The benchmark launch does not alter device ACLs. That
@@ -127,20 +120,17 @@ policy.
 
 ## LULESH Kokkos HIP
 
-Validated October 22, 2026 on the same Ubuntu 24.04.4, kernel 6.8.0-124,
+Validated on the same Ubuntu 24.04.4, kernel 6.8.0-124,
 dual-MI100 (`gfx908`) node and ROCm 6.4.3 container stack. LULESH uses legacy
 PAPI `rocm` and `rocm_smi`, not XSBench's `rocp_sdk`. The legacy image
 `mincer-rocm-legacy:latest` was built from the same digest-pinned ROCm base and
 SHA-verified PAPI 7.2.0 archive; it adds `bc`, which Kokkos's deprecated
 Makefile requires to generate its version header.
 
-`prepare_lulesh_hip.sh` fetched fresh Kokkos Mini-Apps revision
-`870fea7443a915336d9a545b0267dd6eb5bed396` and Kokkos 4.6.01 revision
-`1b1383c6001f3bfe9fe309ca923c2d786600cc79`. The initial build without `bc`
-failed before compilation completed; adding `bc` fixed the missing
-`KOKKOS_VERSION` macro and the source build succeeded. The actual validation
-then rebuilt cleanly through the example launcher and MINCER. Build diagnostics
-are in ignored `build/build_2026-10-22T15-26-09-831616706.log`.
+`prepare_lulesh_hip.sh` fetches the pinned Kokkos Mini-Apps source and Kokkos
+4.6.01. The source build and run passed through the example launcher and MINCER.
+Build diagnostics
+are in ignored `build/build_<timestamp>.log`.
 
 The tested command was:
 
@@ -200,7 +190,7 @@ the HIP application. The PDF case passed numerical validation with origin
 energy `3.833852e+08` and zero plane-zero difference diagnostics. PAPI returned
 all five required ROCm counters and three SMI sensors, printed
 `PAPI measurement: PASS`, and MINCER exited with status 0. The output was
-`experiment_logs/run_2026-10-22T15-38-45-873835/output.txt`; compiler
+`experiment_logs/run_<timestamp>/output.txt`; compiler
 diagnostics were saved separately in the timestamped `build/` log.
 
 The test used fresh Kokkos and Mini-Apps Git worktrees sharing already-fetched

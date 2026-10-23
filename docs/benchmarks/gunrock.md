@@ -41,11 +41,10 @@ explicit Ubuntu system-install option. Git, `patch`, and `tar` are also required
 
 ## Lightweight, repeatable source preparation
 
-The preparation script fetches Gunrock revision
-`530f25443864d04c25286c053d6812a888b4d779` and applies the small local
+The preparation script downloads the tested Gunrock source and applies the local
 instrumentation patch. That patch also pins five CMake dependencies (CCCL,
-ModernGPU, cxxopts, nlohmann/json, and CMake Modules) to the revisions found in the
-historical uploaded example, rather than following moving branches.
+ModernGPU, cxxopts, nlohmann/json, and CMake Modules) to fixed revisions,
+rather than following moving branches.
 
 The unmodified upstream checkout and generated working source stay under ignored
 `build/` directories. Re-running preparation refreshes generated work files;
@@ -92,8 +91,7 @@ for this graph-traversal workload; it is not a FLOP total. CUDA byte totals and
 timings vary and are not portable thresholds. NVML utilization is a sampled
 reading, not an average over this very short traversal, so zero is possible.
 
-The historical PDF log showed NVML component assignment failing. The new patch
-initializes native CUDA/NVML events before graph allocation and requires all six
+The instrumentation initializes native CUDA/NVML events before graph allocation and requires all six
 metrics, with checked setup/start/stop calls and synchronization boundaries.
 Missing measurements cause a visible failure instead of an apparent success.
 
@@ -111,8 +109,3 @@ Compiler and CMake details are saved separately in `build/build_<timestamp>.log`
 the main output prints its path. A failed build prints its last 30 diagnostic
 lines and exits nonzero. Nothing is silently suppressed, but successful compiler
 commands and container startup banners do not obscure results.
-
-No textual reference is supplied because timings and monitoring values vary.
-MINCER's skipped reference comparison is separate from the GPU/CPU distance
-validation. See the [NVIDIA validation record](../nodes/nvidia-validation.md)
-for actual tests and limitations.

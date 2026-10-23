@@ -2,26 +2,13 @@
 
 ## Environment and scope
 
-Tested October 22, 2026 on Ubuntu 24.04, Linux 6.8.0-124-generic,
+Tested on Ubuntu 24.04, Linux 6.8.0-124-generic,
 Intel Xeon Gold 6126, approximately 187.4 GiB RAM, and one Quadro RTX 6000
 with 24 GiB VRAM and NVIDIA driver 560.35.05. The host CUDA compiler is 12.6;
 the experiment builds and runs inside CUDA 12.3.1 / Ubuntu 22.04 with PAPI 7.2.0.
 
 The following sections validate NVIDIA XSBench, LULESH, and Gunrock only, not CPU, AMD,
 other workloads, other GPUs, or unmodified upstream checkouts.
-
-## Problems found and resolutions
-
-| Check | Observation | Repository resolution |
-| --- | --- | --- |
-| Original launcher | Docker absent, misleading missing-image error | Setup checks prerequisites; explicit opt-in Ubuntu system installation |
-| Python runner | `psutil` absent | Setup creates a user-local Python venv and installs it |
-| Image naming | Historical build and launcher names differed | Shared `mincer-papi-cuda:latest` default |
-| PAPI build | Old Dockerfile suppressed failures | Build errors now stop the image build |
-| NVML component tests | Build tried `/bin/nvcc` | Set `PAPI_CUDA_ROOT=/usr/local/cuda` |
-| Counter access | Default run failed at PAPI start with code -14; host restricts profiling | Check all PAPI operations; administrator-approved capability is explicit opt-in |
-| Results logging | Failure could imply success; matching reference logged as skipped | Nonzero failure/mismatch status, saved diagnostics, distinct skip/pass |
-| Metric identity | Missing events could shift reported values | Require this example's complete event set before reporting |
 
 ## Measured instrumented result
 
@@ -46,8 +33,8 @@ logs stay local and ignored rather than being committed.
 
 A second test exported only tracked and intended non-ignored files into a new
 directory (approximately 280 KiB for the entire working source tree, excluding
-Git history). Setup and a full rebuild/run succeeded there without the uploaded
-MINCER tree, old benchmark binaries, or old logs. The Docker build reused its
+Git history). Setup and a full rebuild/run succeeded there without prebuilt
+benchmark binaries or existing logs. The Docker build reused its
 already-tested image layers. The second run again reported checksum 952131
 (Valid), all four CUDA metrics, and both NVML metrics.
 
@@ -68,15 +55,6 @@ already-tested image layers. The second run again reported checksum 952131
   a newly reimaged machine; its package/runtime steps were performed on this node.
 
 ## LULESH CUDA
-
-The uploaded Kokkos copy was incomplete: a clean build failed on missing
-`desul/atomics/Atomic_Ref.hpp`. A fresh pinned Kokkos 4.6.01 resolved compilation.
-No uploaded binaries or static libraries were used.
-
-The original LULESH source ran the 96-cubed/10-iteration case without extra
-capabilities and printed the expected energy and symmetry checks, but silently
-failed to collect CUDA counters. NVML assignment also failed, as it did in the
-historical PDF log. This was not a successful monitoring test.
 
 The repository now fetches pinned Mini-Apps and Kokkos revisions and applies a
 small local instrumentation patch. Native CUDA events are initialized before
@@ -110,23 +88,14 @@ layers were reused. Repeating preparation is supported. A negative test without
 the profiling capability returned status 1 with an explicit CUDA-counter startup
 error instead of silently omitting metrics.
 
-After cleanup, a further full run passed with compiler output in a separate
-timestamped build log. The OpenMP macro now respects the command-line setting;
-the build no longer emits the `USE_OMP` redefinition warning. Main benchmark
-output was reduced to 55 lines without removing measurements or numerical checks.
-
 ## Gunrock CUDA BFS
 
-The uploaded source revision is
-`530f25443864d04c25286c053d6812a888b4d779`. The uploaded dependency Git databases
-reported damaged pack/index files, so no existing dependency checkouts or
-binaries were trusted. Fresh upstream source and five pinned CMake dependencies
+Fresh upstream source and five pinned CMake dependencies
 built successfully in the existing CUDA/PAPI image.
 
 The example follows the PDF's Chesapeake graph and source vertex 17. It builds
 only the BFS target (DAWN algorithm at this revision) and adds `--validate`.
-The old PDF log showed an NVML assignment failure and unchecked CUDA start calls.
-The patch now checks all six metrics, synchronizes GPU work, and returns nonzero
+The instrumentation checks all six metrics, synchronizes GPU work, and returns nonzero
 on PAPI failures or distance mismatches.
 
 With explicitly approved profiling capability, a complete new launcher run gave:
@@ -161,12 +130,10 @@ distance mismatches with all six measurements present. Only the existing tested
 Docker image layers and Python environment were reused. This is not a test of
 automatic system installation on a newly reimaged node.
 
-## Fresh-user walkthrough, October 22, 2026
+## Fresh-user walkthrough
 
-A clean `git clone --no-local` from the committed local repository was used
-for this test. This validated the committed checkout rather than cloning from
-GitHub. No ignored dependencies, binaries, or logs came from the original
-checkout or uploaded MINCER tree.
+A clean local clone was used for this test, without prebuilt dependencies,
+binaries, or logs.
 
 From that clone, `bash setup_cuda.sh` completed, fetched fresh pinned sources,
 and printed the three run commands. All three were then run through MINCER
@@ -178,11 +145,8 @@ with the previously approved `MINCER_ALLOW_GPU_PROFILING=1`:
 | LULESH | 0 | 96 cubed, 10 iterations; energy `3.833852e+08`; all three symmetry differences zero | Four CUDA counters, NVML utilization and temperature |
 | Gunrock BFS | 0 | Source 17; zero CPU/GPU distance mismatches | Four CUDA counters, NVML utilization and temperature |
 
-The eight existing Python regression tests also passed. Generated payloads
-remained ignored and the test clone's tracked working tree stayed clean.
-No workload/setup implementation changes were needed. The README now includes
-clone/access instructions, all three run commands, profiling guidance, and
-the checks to inspect in the saved output.
+Regression tests also passed, including checks for build/runtime failures and
+profiling opt-in handling.
 
 This machine already had Docker, NVIDIA Container Toolkit, the tested container
 layers, and the Python environment. Those were reused; this is not a clean-OS

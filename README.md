@@ -196,8 +196,6 @@ MI100 node. See the
 [AMD validation record](docs/nodes/amd-validation.md) for scope and
 measurements.
 
-Historical launchers for other workloads contain machine-specific paths and image names. The included XSBench CUDA launcher instead uses its own directory and the image built by `setup_cuda.sh`. Confirm event support and dataset preparation for other workloads before treating measurements as reproducible.
-
 ## Requirements
 
 The measurement workloads target Linux. GPU examples additionally require a compatible GPU, host drivers, and the matching container runtime/device access:
@@ -222,7 +220,8 @@ docker build -f Dockerfile.rocm -t mincer-papi-rocm:latest .
 docker build -f Dockerfile.amdrocpsdk -t mincer-rocm-sdk:latest .
 ```
 
-These are baseline image names for a clean setup. The historical example scripts expect other names (for example, `papi_chameleon_cpu`, `final_dock`, and `amd_papi_test1`) and in some cases use fixed host paths. Adjust the script/image configuration to match your checkout and node; building a Dockerfile alone does not make those scripts portable.
+Use the platform setup commands above for the documented examples; they build
+the required images and prepare dependencies.
 
 ## Run the MINCER utilities
 

@@ -83,7 +83,7 @@ variables and fail explicitly when required counters cannot be collected.
 
 ## Validation on the CPU node
 
-Validated on October 22, 2026 on Ubuntu 24.04.4 / Linux 6.8.0-124-generic,
+Validated on Ubuntu 24.04.4 / Linux 6.8.0-124-generic,
 dual-socket Intel Xeon Gold 6240R, 96 logical CPUs, and 187 GiB RAM. The
 instrumented source built in the Ubuntu 22.04 / PAPI 7.2.0 CPU image from the
 repository and ran through MINCER. Both layouts passed the analytical

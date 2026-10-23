@@ -11,7 +11,7 @@ administrator-approved and the shared `$HOME/.venvs/mincer` environment used
 Python 3.12.3 with `psutil` 7.2.2.
 
 This record covers the AMD GPU examples documented here: XSBench HIP and
-LULESH Kokkos HIP. No work was done on U-Net. The handoff bundle passed its
+LULESH Kokkos HIP. The handoff bundle passed its
 supplied SHA256 checksums before use. The repository checkout was clean at the latest
 published `main` commit before changes. A terminal Git pull could not
 authenticate; the available checkout already matched `origin/main` at

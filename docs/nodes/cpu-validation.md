@@ -17,7 +17,7 @@ The separate [NVIDIA record](nvidia-validation.md) covers CUDA workflows.
 
 Follow the [README CPU walkthrough](../../README.md#start-on-cpu):
 
-1. Obtain access to the private repository, authenticate, clone, and enter it.
+1. Clone the repository and enter it.
 2. Run `setup_cpu.sh` once with the approved Docker access path. It creates the
    shared Python environment, builds the CPU image, and prepares pinned
    LULESH/Kokkos sources. It needs Git, `patch`, Python venv support, Docker,

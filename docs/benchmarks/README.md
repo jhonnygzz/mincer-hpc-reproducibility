@@ -51,6 +51,5 @@ their own numerical checks even without a reference file.
   `setup_amd.sh` prepares the AMD XSBench or LULESH HIP workflow.
 - Several old `run.sh` files mount fixed paths under `/home/cc/` and expect image names that differ between examples. Replace these paths/tags for the actual checkout and node.
 - Some documented runs use PAPI-instrumented variants. Downloading an upstream project alone may not reproduce those modifications or expose the same PAPI events.
-- The historical PyTorch KiTS19 workflow expects preprocessed HDF5 case files. The full dataset download command is given in its guide, but the conversion/subset-preparation procedure for the exact historical files is not included here.
 
 Resolve and test these points on the Chameleon allocation before publishing measured results as reproducible.

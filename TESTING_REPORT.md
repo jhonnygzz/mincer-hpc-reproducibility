@@ -14,20 +14,7 @@ The historical entries below do not establish current CPU/AMD support.
 
 ## 🧪 Tests Performed
 
-### 1. UNet3D + PAPI Performance Monitoring ✅ **PASSED**
-- **Image:** `mincer-unet3d-papi:latest` (28.6GB)
-- **Command:** `./build-and-run-unet3d.sh run`
-- **Status:** Successfully completed full training cycle
-- **Key Results:**
-  - ✅ PAPI initialized with 5 components
-  - ✅ ROCm GPU monitoring: 6 GPU + 5 system events active
-  - ✅ MLPerf model loaded: 31,190,243 parameters
-  - ✅ Dataset: 6 training samples (optimized from 210→8 samples)
-  - ✅ GPU detection: AMD Instinct MI100 with 34.3GB memory
-  - ✅ Performance counters: GPUBusy, VALUUtilization, L2CacheHit, etc.
-
-### 2. MINCER Experiment Runner ✅ **PASSED**  
-- **Command:** `python3 run_experiment.py --path examples/unet3d`
+### 1. MINCER Experiment Runner ✅ **PASSED**
 - **Status:** Successfully executed and logged
 - **Key Results:**
   - ✅ System detection: 2 GPUs correctly identified
@@ -35,40 +22,19 @@ The historical entries below do not establish current CPU/AMD support.
   - ✅ Output logging to `experiment_logs/`
   - ✅ Execution logs generated properly
 
-### 3. PyTorch 3D U-Net Example ✅ **PASSED**
-- **Command:** `python3 run_experiment.py --path examples/pytorch-3dunet`  
-- **Status:** Successfully executed
-- **Key Results:**
-  - ✅ Script execution completed
-  - ✅ Output captured and logged
-  - ✅ No errors detected
-
-### 4. Docker Configuration Testing ✅ **PASSED**
+### 2. Docker Configuration Testing ✅ **PASSED**
 - **Available Images:** 11 Docker images built successfully
-- **MINCER Dockerfiles:** 6 configurations available
-  - `Dockerfile.unet3d-papi` ✅ (Main focus - tested and working)
+- **MINCER Dockerfiles:**
   - `Dockerfile.cpu` ✅ (Build tested successfully)
   - `Dockerfile.cypapi` ✅ (Available)
   - `Dockerfile.rocm` ✅ (Available)  
   - `Dockerfile.papicuda` ✅ (Available)
   - `Dockerfile.amdrocpsdk` ✅ (Available)
 
-### 5. Test Issues Identified ⚠️
+### 3. Test Issues Identified ⚠️
 - **test_experiment:** Missing Docker image `papi_chameleon_cpu:latest`
   - **Impact:** Medium - This example requires additional Docker image not provided
   - **Fix Required:** Either build missing image or update example
-
-## 📊 Performance Metrics Collected
-
-### GPU Performance Monitoring
-- **ROCm Events:** GPUBusy, VALUUtilization, VALUBusy, L2CacheHit, TCC_HIT_sum, FetchSize
-- **System Events:** Power, temperature, memory usage, GPU utilization  
-- **Output Format:** Real-time console + CSV logging
-
-### Dataset Optimization
-- **Original:** 210 cases (29GB)
-- **Optimized:** 8 cases (1.1GB) 
-- **Space Saved:** 96% reduction while maintaining realistic workload
 
 ## Historical Results vs. Public Distribution
 

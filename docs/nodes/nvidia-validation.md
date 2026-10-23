@@ -163,11 +163,9 @@ automatic system installation on a newly reimaged node.
 
 ## Fresh-user walkthrough, October 22, 2026
 
-An HTTPS clone from GitHub stopped at an unavailable authentication prompt,
-consistent with the documented private-repository access requirement. A clean
-`git clone --no-local` from the committed local repository was used instead.
-This validates the committed checkout, not GitHub authentication or anonymous
-access. No ignored dependencies, binaries, or logs came from the original
+A clean `git clone --no-local` from the committed local repository was used
+for this test. This validated the committed checkout rather than cloning from
+GitHub. No ignored dependencies, binaries, or logs came from the original
 checkout or uploaded MINCER tree.
 
 From that clone, `bash setup_cuda.sh` completed, fetched fresh pinned sources,
@@ -191,11 +189,3 @@ layers, and the Python environment. Those were reused; this is not a clean-OS
 installation test. Initial benchmark source/dependency downloads and compilation
 were performed again. System installation and changes to host profiling policy
 were not attempted.
-
-## Deferred: PyTorch 3D U-Net
-
-The three uploaded KiTS19 HDF5 inputs are truncated and cannot be opened.
-Complete original copies are unavailable, and a reproducible conversion process
-has not been supplied. The workflow is deferred, not validated, and excluded
-from the fresh-user walkthrough. No new U-Net image build, full dataset download,
-or training run was performed.

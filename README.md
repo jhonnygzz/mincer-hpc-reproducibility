@@ -218,7 +218,6 @@ Run these commands from the repository root on a Linux machine with Docker:
 ```bash
 docker build -f Dockerfile.cpu -t mincer-papi-cpu:latest .
 docker build -f Dockerfile.papicuda -t mincer-papi-cuda:latest .
-docker build -f Dockerfile.cypapi -t mincer-cypapi-cuda:latest .
 docker build -f Dockerfile.rocm -t mincer-papi-rocm:latest .
 docker build -f Dockerfile.amdrocpsdk -t mincer-rocm-sdk:latest .
 ```
@@ -255,9 +254,12 @@ For fresh Chameleon allocations, start with the [node-specific quick start](docs
 
 ## Testing and provenance
 
-[`TESTING_REPORT.md`](TESTING_REPORT.md) records historical results from a previously provisioned Linux/AMD MI100 environment. Current NVIDIA results are recorded separately in the [NVIDIA validation record](docs/nodes/nvidia-validation.md). Re-run benchmarks on each target node; historical output does not establish support for another hardware/software configuration. Share logs only after checking for sensitive information and large artifacts.
-The current AMD XSBench HIP validation is recorded separately in the
-[AMD validation record](docs/nodes/amd-validation.md).
+Test results are recorded in the [CPU](docs/nodes/cpu-validation.md),
+[NVIDIA](docs/nodes/nvidia-validation.md), and
+[AMD](docs/nodes/amd-validation.md) validation records. Re-run benchmarks on
+each target node; results from one hardware/software configuration do not
+establish support for another. Share logs only after checking for sensitive
+information and large artifacts.
 
 ## Attribution
 

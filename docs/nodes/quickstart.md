@@ -43,8 +43,6 @@ python -m pip install psutil
 
 If `venv` is unavailable, ask the node administrator to install the matching Python venv package; avoid installing packages into the system Python.
 
-> **Do not run `mincer-package/bootstrap.sh` as a setup shortcut.** It removes `/opt/papi` before installing PAPI and may overwrite a system or administrator-managed PAPI installation.
-
 ## 2. Common first checks
 
 Run these before building an image. If Docker is missing or access is denied, ask the node administrator rather than changing system permissions yourself.
